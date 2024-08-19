@@ -7,12 +7,14 @@ const h = window.innerHeight;
 export default class Scene {
   constructor({ width = 10, length = 10 }) {
     // Initialize scene, camera, and renderer
+    this.s_width = width;
+    this.s_length = length;
     this.scene = new THREE.Scene();
-
     this.camera = new THREE.PerspectiveCamera(75, w / h, 0.1, 1000);
     this.camera.position.z = width;
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
     this.renderer.setSize(w, h);
+
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     document.body.appendChild(this.renderer.domElement);
@@ -24,7 +26,7 @@ export default class Scene {
     this.setupLights({ width, length });
     this.setUpPlatform({ width, length });
     this.buildingsToGrow = [];
-    this.hoverObject = null;
+    this.hoverObjects = [];
   }
 
   setUpPlatform({ width, length }) {
@@ -59,16 +61,16 @@ export default class Scene {
 
   draw = () => {
     this.renderer.render(this.scene, this.camera);
-    for (let i = this.buildingsToGrow.length - 1; i >= 0; i--) {
-      const building = this.buildingsToGrow[i];
+    // for (let i = this.buildingsToGrow.length - 1; i >= 0; i--) {
+    //   const building = this.buildingsToGrow[i];
 
-      if (building.height < building.maxHeight) {
-        building.grow(); // Continue growing if not yet at max height
-      } else {
-        // Remove the building from the scene and the array
-        this.buildingsToGrow.splice(i, 1); // Remove from the array
-      }
-    }
+    //   if (building.height < building.maxHeight) {
+    //     building.grow(); // Continue growing if not yet at max height
+    //   } else {
+    //     // Remove the building from the scene and the array
+    //     this.buildingsToGrow.splice(i, 1); // Remove from the array
+    //   }
+    // }
   };
 
   start() {
@@ -80,14 +82,13 @@ export default class Scene {
   }
 
   handleAddObject({ x, y }) {
-    const buildingHeight = Math.floor(Math.random() * 5) + 1;
     const building = new Building({
       x,
       y,
-      maxHeight: buildingHeight,
     });
-    this.scene.add(building.mesh);
-    this.buildingsToGrow.push(building);
+    building.loadGLTF((mesh) => this.scene.add(mesh));
+
+    // this.buildingsToGrow.push(building);
   }
 
   onSelectObject(e) {
@@ -109,18 +110,56 @@ export default class Scene {
     const intersections = this.getIntersections();
 
     if (intersections.length > 0) {
-      if (this.hoverObject) {
-        this.hoverObject.material.emissive.setHex(0);
+      if (this.hoverObjects.length) {
+        this.hoverObjects.forEach((c) => c.material.emissive.setHex(0));
       }
 
-      this.hoverObject = intersections[0].object;
-      this.hoverObject.material.emissive.setHex(0x555555);
+      const corner = intersections[0].object;
+      this.hoverObjects = this.getChildrenInGrid(
+        corner.position,
+        Building.base
+      );
+      this.hoverObjects.forEach((c) => c.material.emissive.setHex(0x555555));
     } else {
-      if (this.hoverObject) {
-        this.hoverObject.material.emissive.setHex(0);
-        this.hoverObject = null;
+      if (this.hoverObjects.length > 0) {
+        this.hoverObjects.forEach((c) => c.material.emissive.setHex(0));
+        this.hoverObjects = [];
       }
     }
+  }
+
+  //x is width and z is length
+  getChildrenInGrid(cornerPosition, gridSize = { x: 1, z: 1 }) {
+    const childrenInGrid = [];
+
+    // Ensure cornerPosition is the top-left corner
+    let { x: cornerX, y: cornerY, z: cornerZ } = cornerPosition;
+    if (cornerX + gridSize.x > Math.floor(this.s_width / 2)) {
+      cornerX = Math.floor(this.s_width / 2) - gridSize.x;
+    }
+
+    if (cornerZ + gridSize.z > Math.floor(this.s_length / 2)) {
+      cornerZ = Math.floor(this.s_length / 2) - gridSize.z;
+    }
+
+    // Traverse through all children in the scene
+    this.scene.traverse((child) => {
+      if (child.isMesh) {
+        const position = child.position;
+
+        // Check if the child's position is within the grid bounds
+        if (
+          position.x >= cornerX &&
+          position.x < cornerX + gridSize.x &&
+          position.z >= cornerZ &&
+          position.z < cornerZ + gridSize.z
+        ) {
+          childrenInGrid.push(child);
+        }
+      }
+    });
+
+    return childrenInGrid;
   }
 
   updateMousePosition(e) {
