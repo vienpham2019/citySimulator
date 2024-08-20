@@ -1,6 +1,8 @@
 import * as THREE from "three";
-import Building from "./Building.js";
+
 import Grass from "./Grass.js";
+import IndustryFactory from "./buildings/IndustryFactory.js";
+import { converMeshRotationToDegrees } from "./helper.js";
 const w = window.innerWidth;
 const h = window.innerHeight;
 
@@ -27,6 +29,16 @@ export default class Scene {
     this.setUpPlatform({ width, length });
     this.buildingsToGrow = [];
     this.hoverObjects = [];
+    this.previewModel = null;
+  }
+
+  async init() {
+    this.previewModel = await IndustryFactory.create({
+      x: 0,
+      y: 0,
+      isPreview: true,
+    });
+    this.scene.add(this.previewModel.mesh);
   }
 
   setUpPlatform({ width, length }) {
@@ -57,20 +69,11 @@ export default class Scene {
     //Create a helper for the shadow camera (optional)
     // const helper = new THREE.CameraHelper(sun.shadow.camera);
     // this.scene.add(helper);
+    this.buildings = [];
   }
 
   draw = () => {
     this.renderer.render(this.scene, this.camera);
-    // for (let i = this.buildingsToGrow.length - 1; i >= 0; i--) {
-    //   const building = this.buildingsToGrow[i];
-
-    //   if (building.height < building.maxHeight) {
-    //     building.grow(); // Continue growing if not yet at max height
-    //   } else {
-    //     // Remove the building from the scene and the array
-    //     this.buildingsToGrow.splice(i, 1); // Remove from the array
-    //   }
-    // }
   };
 
   start() {
@@ -81,27 +84,28 @@ export default class Scene {
     this.renderer.setAnimationLoop(null);
   }
 
-  handleAddObject({ x, y }) {
-    const building = new Building({
-      x,
-      y,
-    });
-    building.loadGLTF((mesh) => this.scene.add(mesh));
+  async handleAddObject() {
+    const colisions = this.buildings.filter((building) =>
+      this.previewModel.isColision(building)
+    );
+    if (colisions.length > 0) return;
+    let { position, rotation } = this.previewModel.mesh;
+    position = { x: position.x, y: position.z };
+    rotation = converMeshRotationToDegrees(rotation);
 
-    // this.buildingsToGrow.push(building);
+    const factory = await IndustryFactory.create({
+      position,
+      rotation,
+    });
+    this.buildings.push(factory);
+    this.scene.add(factory.mesh);
   }
 
   onSelectObject(e) {
     this.updateMousePosition(e);
     const intersections = this.getIntersections();
-
     if (intersections.length > 0) {
-      this.selectedObject = intersections[0].object;
-
-      const { x, z } = this.selectedObject.position;
-      if (this.selectedObject.name === "Grass") {
-        this.handleAddObject({ x, y: z });
-      }
+      this.handleAddObject();
     }
   }
 
@@ -113,12 +117,18 @@ export default class Scene {
       if (this.hoverObjects.length) {
         this.hoverObjects.forEach((c) => c.material.emissive.setHex(0));
       }
-
       const corner = intersections[0].object;
       this.hoverObjects = this.getChildrenInGrid(
         corner.position,
-        Building.base
+        IndustryFactory.base
       );
+      const { x, z } = this.hoverObjects[0].position;
+      this.previewModel.updatePosition({ x, z });
+      const colisions = this.buildings.filter((building) =>
+        this.previewModel.isColision(building)
+      );
+      this.previewModel.setIsCollision(colisions.length > 0);
+
       this.hoverObjects.forEach((c) => c.material.emissive.setHex(0x555555));
     } else {
       if (this.hoverObjects.length > 0) {
@@ -133,7 +143,7 @@ export default class Scene {
     const childrenInGrid = [];
 
     // Ensure cornerPosition is the top-left corner
-    let { x: cornerX, y: cornerY, z: cornerZ } = cornerPosition;
+    let { x: cornerX, z: cornerZ } = cornerPosition;
     if (cornerX + gridSize.x > Math.floor(this.s_width / 2)) {
       cornerX = Math.floor(this.s_width / 2) - gridSize.x;
     }
