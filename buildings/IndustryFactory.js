@@ -2,13 +2,14 @@ import Building from "./Building.js";
 
 export default class IndustryFactory extends Building {
   static base = { x: 2, z: 2 };
-  static modelUrl = "../models/industry-factory-old.glb";
+  static modelUrl = "../models/buildings/industry-factory-old.glb";
   static offset = { x: 0.5, y: 0.5 };
 
   constructor({ isPreview }) {
     super({
       isPreview,
       modelUrl: IndustryFactory.modelUrl,
+      scale: { x: 2, y: 2, z: 2 },
     });
   }
 

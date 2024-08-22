@@ -35,6 +35,12 @@ document.body.addEventListener(
     if (event.key === "r" || event.key === "R") {
       myScene.previewModel.rotate({ y: 90 });
     }
+    if (event.key === "1") {
+      myScene.selectRoad = "Main";
+    }
+    if (event.key === "2") {
+      myScene.selectRoad = "Normal";
+    }
   },
   false
 );
