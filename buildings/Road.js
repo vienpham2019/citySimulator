@@ -17,16 +17,21 @@ export default class Road extends Building {
     name = "Road",
     modelUrl = "../models/roads/tile-mainroad-straight.glb",
   }) {
+    position = {
+      x: position.x + Road.offset.x,
+      y: 0.2,
+      z: position.z + Road.offset.y,
+    };
     const obj = await super.create({
       obj: new Road({ isPreview, modelUrl }),
       position,
     });
     obj.position = position;
-    obj.mesh.name = name;
+    obj.mesh.name = isPreview ? "Preview Road" : name;
     return obj;
   }
 
   updatePosition({ x, z }) {
-    this.mesh.position.set(x + Road.offset.x, 0, z + Road.offset.y);
+    this.mesh.position.set(x + Road.offset.x, -0.2, z + Road.offset.y);
   }
 }

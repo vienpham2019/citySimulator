@@ -53,7 +53,7 @@ export default class Building {
         this.modelUrl,
         (gltf) => {
           const mesh = gltf.scene;
-          mesh.position.set(position.x, 0.2, position.y);
+          mesh.position.set(position.x, position.y, position.z);
           mesh.traverse((obj) => {
             if (obj.material) {
               obj.receiveShadow = true;
