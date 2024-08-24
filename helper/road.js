@@ -99,52 +99,42 @@ const roadUrls = [
   "../models/roads/tile-roads-mainroad-intersection.glb", // 13
   "../models/roads/tile-road-intersection.glb", // 14
 ];
-let rotation = { x: 0, y: 0, z: 0 };
-const roadUrlDetails = {
-  "╋": {
-    url: roadUrls[1],
-    rotation,
-  },
-  "┳": {
-    url: roadUrls[2],
-    rotation,
-  },
-  "┫": {
-    url: roadUrls[2],
-    rotation: { ...rotation, y: 270 },
-  },
-  "┻": {
-    url: roadUrls[2],
-    rotation: { ...rotation, y: 180 },
-  },
-  "┣": {
-    url: roadUrls[2],
-    rotation: { ...rotation, y: 90 },
-  },
-  "┃": {
-    url: roadUrls[5],
-    rotation,
-  },
-  "━": {
-    url: roadUrls[5],
-    rotation: { ...rotation, y: 90 },
-  },
-  "┗": {
-    url: roadUrls[0],
-    rotation: { ...rotation, y: 90 },
-  },
-  "┛": {
-    url: roadUrls[0],
-    rotation: { ...rotation, y: 180 },
-  },
-  "┏": {
-    url: roadUrls[0],
-    rotation,
-  },
-  "┓": {
-    url: roadUrls[0],
-    rotation: { ...rotation, y: 270 },
-  },
+const getRoadDetails = (sign) => {
+  const rotation = { x: 0, y: 0, z: 0 };
+  const roadUrls = {
+    "╋": "../models/roads/tile-mainroad-intersection.glb",
+    "┳┫┻┣": "../models/roads/tile-mainroad-intersection-t.glb",
+    "┃━": "../models/roads/tile-mainroad-straight.glb",
+    "┗┛┏┓": "../models/roads/tile-mainroad-curve.glb",
+    "┼": "../models/roads/tile-road-intersection.glb",
+    "┬┤┴├": "../models/roads/tile-road-intersection-t.glb",
+    "│─": "../models/roads/tile-road-straight.glb",
+    "└┘┌┐": "../models/roads/tile-road-curve.glb",
+    "╿╽╼╾": "../models/roads/tile-road-to-mainroad.glb",
+  };
+  const roadRotation = {
+    "╋┼┳┬┃│┏┌╿": { ...rotation },
+    "┣├━─┗└╾": { ...rotation, y: 90 },
+    "┻┴┛┘╽": { ...rotation, y: 180 },
+    "┫┤┓┐╼": { ...rotation, y: 270 },
+  };
+  const result = { modelUrl: null, rotation: null };
+  for (const key in roadUrls) {
+    if (key.includes(sign)) {
+      result.modelUrl = roadUrls[key];
+      break;
+    }
+  }
+
+  for (const key in roadRotation) {
+    if (key.includes(sign)) {
+      result.rotation = roadRotation[key];
+      break;
+    }
+  }
+
+  // Return null or a default value if no match is found
+  return result;
 };
 
 const converMeshRotationToDegrees = ({ _x, _y, _z }) => {
@@ -315,20 +305,32 @@ const handleSetSymbol = async ({
   if (isLeftNormal) roadVal[3] = "N";
 
   if (roadCount === 1) {
-    if (isTop) roadVal[2] = roadVal[0];
-    else if (isBottom) roadVal[0] = roadVal[2];
-    else if (isLeft) roadVal[1] = roadVal[3];
-    else if (isRight) roadVal[3] = roadVal[1];
+    if (isTop) {
+      roadVal[2] = self[1][0] === "-" ? roadVal[0] : self[1][2];
+    } else if (isBottom) {
+      roadVal[0] = self[1][2] === "-" ? roadVal[2] : self[1][2];
+    } else if (isLeft) {
+      roadVal[1] = self[1][3] === "-" ? roadVal[3] : self[1][1];
+    } else if (isRight) {
+      roadVal[3] = self[1][1] === "-" ? roadVal[1] : self[1][3];
+    }
   } else if (roadCount === 0) {
     roadVal = [self[1][0], self[1][3], self[1][0], self[1][3]];
   }
 
   const assignName = AssignRoadMap[roadVal.join("")];
-  const roadMesh = findMesh({ position });
-  if (!roadMesh || roadMesh?.name !== assignName) {
+  const roadMesh = findMesh({
+    position,
+    notInCludeName: ["Building", "Preview Road"],
+  });
+  if (
+    !roadMesh ||
+    roadMesh?.name === "Grass" ||
+    roadMesh?.name !== assignName
+  ) {
     roadGrids[row][col] = [assignName, roadVal];
     if (roadMesh) deleteMesh(roadMesh);
-    const { url: modelUrl, rotation } = roadUrlDetails[assignName];
+    const { modelUrl, rotation } = getRoadDetails(assignName);
     addRoadMesh({ position, name: assignName, modelUrl, rotation });
   }
 };
@@ -342,6 +344,7 @@ const handleAddRoadToGrid = ({
   addRoadMesh,
   findMesh,
   deleteMesh,
+  addGrass,
 }) => {
   const { isTop, isRight, isBottom, isLeft, isSelf } = getNeightborRoad({
     col,
@@ -402,7 +405,15 @@ const handleAddRoadToGrid = ({
       addRoadMesh,
       findMesh,
       deleteMesh,
-    }); // selft
+    });
+  if (isSelf) {
+    const roadMesh = findMesh({
+      position,
+      notInCludeName: ["Building", "Preview Road"],
+    });
+    deleteMesh(roadMesh);
+    addGrass({ position });
+  }
 };
 
 const getNeightborRoad = ({ col, row, roadGrids }) => {
@@ -431,7 +442,6 @@ const getNeightborRoad = ({ col, row, roadGrids }) => {
 };
 
 export {
-  roadUrlDetails,
   converMeshRotationToDegrees,
   printGrid,
   handleSetSymbol,

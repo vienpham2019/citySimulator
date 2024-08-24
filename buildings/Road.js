@@ -19,7 +19,7 @@ export default class Road extends Building {
   }) {
     position = {
       x: position.x + Road.offset.x,
-      y: 0.2,
+      y: 0,
       z: position.z + Road.offset.y,
     };
     const obj = await super.create({
@@ -28,10 +28,11 @@ export default class Road extends Building {
     });
     obj.position = position;
     obj.mesh.name = isPreview ? "Preview Road" : name;
+
     return obj;
   }
 
   updatePosition({ x, z }) {
-    this.mesh.position.set(x + Road.offset.x, -0.2, z + Road.offset.y);
+    this.mesh.position.set(x + Road.offset.x, 0.1, z + Road.offset.y);
   }
 }

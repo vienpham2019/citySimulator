@@ -33,8 +33,7 @@ export default class Building {
   isColision(target) {
     const thisBoundingBox = new THREE.Box3().setFromObject(this.mesh);
     const targetBoundingBox = new THREE.Box3().setFromObject(target.mesh);
-    // return targetBoundingBox.intersectsBox(thisBoundingBox);
-    return false;
+    return targetBoundingBox.intersectsBox(thisBoundingBox);
   }
 
   static async create({ obj, position }) {
