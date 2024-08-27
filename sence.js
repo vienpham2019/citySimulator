@@ -75,10 +75,11 @@ export default class Scene {
         const grass = new Grass({ x: x_pos, y: y_pos });
         // if (r < roads.length) {
         //   const newRoad = await Road.create({
-        //     position: { x: x_pos, y: y_pos },
+        //     position: { x: x_pos, z: y_pos },
         //     modelUrl: `${roads[r++]}`,
+        //     // scale: { x: 1, y: 1, z: -1 },
         //   });
-        //   newRoad.setRotate({ x: 0, y: 180, z: 0 });
+        //   newRoad.setRotate({ x: 0, y: 90, z: 0 });
         //   this.scene.add(newRoad.mesh);
         // }
         this.roadGrids[x][y] = [" ", ["", "", "", ""]];
@@ -161,11 +162,12 @@ export default class Scene {
     printGrid(this.roadGrids);
   }
 
-  async addRoadMesh({ position, name, modelUrl, rotation }) {
+  async addRoadMesh({ position, name, modelUrl, rotation, scale }) {
     const newRoad = await Road.create({
       position,
       name,
       modelUrl,
+      scale,
     });
     newRoad.setRotate(rotation);
     this.scene.add(newRoad.mesh);

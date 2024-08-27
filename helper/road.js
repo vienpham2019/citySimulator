@@ -101,6 +101,7 @@ const roadUrls = [
 ];
 const getRoadDetails = (sign) => {
   const rotation = { x: 0, y: 0, z: 0 };
+  const scale = { x: 1, y: 1, z: 1 };
   const roadUrls = {
     "╋": "../models/roads/tile-mainroad-intersection.glb",
     "┳┫┻┣": "../models/roads/tile-mainroad-intersection-t.glb",
@@ -111,12 +112,23 @@ const getRoadDetails = (sign) => {
     "│─": "../models/roads/tile-road-straight.glb",
     "└┘┌┐": "../models/roads/tile-road-curve.glb",
     "╿╽╼╾": "../models/roads/tile-road-to-mainroad.glb",
+    "┰┥┸┝": "../models/roads/tile-mainroad-road-intersection-t.glb",
+    "╊╉╈╇": "../models/roads/tile-mainroad-road-intersection.glb",
+    "╁╀┾┽": "../models/roads/tile-roads-mainroad-intersection.glb",
+    "┯┨┷┠": "../models/roads/tile-road-mainroad-intersection-t.glb",
+    "╂┿": "../models/roads/tile-road-mainroad-intersection.glb",
+    "┭┦┶┟": "../models/roads/tile-road-to-mainroad-intersection-t.glb",
+    "┵┞┮┧": "../models/roads/tile-road-to-mainroad-intersection-t.glb",
   };
   const roadRotation = {
-    "╋┼┳┬┃│┏┌╿": { ...rotation },
-    "┣├━─┗└╾": { ...rotation, y: 90 },
-    "┻┴┛┘╽": { ...rotation, y: 180 },
-    "┫┤┓┐╼": { ...rotation, y: 270 },
+    "╋┼┳┬┃│┏┌╿┰╊┯╂┭┵╀": { ...rotation },
+    "┣├━─┗└╾┝╇┠┟┧┿┽": { ...rotation, y: 90 },
+    "┻┴┛┘╽┸╉┷┶┮╁": { ...rotation, y: 180 },
+    "┫┤┓┐╼┥╈┨┦┞┾": { ...rotation, y: 270 },
+  };
+
+  const roadScale = {
+    "┵┞┮┧": { ...scale, z: -1 },
   };
   const result = { modelUrl: null, rotation: null };
   for (const key in roadUrls) {
@@ -129,6 +141,13 @@ const getRoadDetails = (sign) => {
   for (const key in roadRotation) {
     if (key.includes(sign)) {
       result.rotation = roadRotation[key];
+      break;
+    }
+  }
+  result.scale = scale;
+  for (const key in roadScale) {
+    if (key.includes(sign)) {
+      result.scale = roadScale[key];
       break;
     }
   }
@@ -158,40 +177,21 @@ const printGrid = (grid) => {
   }
 };
 
-const isJoinHorizontal = (road) => {
-  if (!road) return false;
-  const count = road.filter((r) => r !== "-").length;
-  if (count !== 2) return;
-  const signRight = road[1][1];
-  const signLeft = road[1][3];
-  if (signRight !== "-" && signLeft !== "-") {
-    return signRight !== signLeft;
-  }
-  return false;
-};
-
-const isJoinVertical = (road) => {
-  if (!road) return false;
-  const count = road.filter((r) => r !== "-").length;
-  if (count !== 2) return;
-  const signTop = road[1][0];
-  const signBottom = road[1][2];
-  if (signTop !== "-" && signBottom !== "-") {
-    return signTop !== signBottom;
-  }
-  return false;
-};
-
 const isRoad = (road) => road !== null && road[0] !== " ";
 
 const isRoadMainOrNormal = ({ type, indexs, road }) => {
-  if (!isRoad(road)) return false;
-  return (
-    road[1][indexs[0]] === type ||
-    (road[1][indexs[0]] === "-" &&
-      road[1][indexs[1]] === type &&
-      road[1][indexs[2]] === type)
-  );
+  const roadVal = road[1].filter((r) => r !== "-");
+  const roadCount = roadVal.length;
+
+  if (roadCount === 2 && roadVal.every((r) => r === type)) return true;
+  else {
+    return (
+      road[1][indexs[0]] === type ||
+      (road[1][indexs[0]] === "-" &&
+        road[1][indexs[1]] === type &&
+        road[1][indexs[2]] === type)
+    );
+  }
 };
 
 const getGridElement = ({ row, col, roadGrids }) => {
@@ -232,6 +232,7 @@ const handleSetSymbol = async ({
     indexs: [3, 0, 2],
     road: right,
   });
+  console.log(isRightMain);
   const isBottomMain = isRoadMainOrNormal({
     type: "M",
     indexs: [0, 1, 3],
@@ -242,7 +243,7 @@ const handleSetSymbol = async ({
     indexs: [1, 0, 2],
     road: left,
   });
-
+  console.log(isLeftMain);
   const isTopNormal = isRoadMainOrNormal({
     type: "N",
     indexs: [2, 1, 3],
@@ -264,37 +265,11 @@ const handleSetSymbol = async ({
     road: left,
   });
 
-  const isSelfJoinVertical = isJoinVertical(self);
-  const isSelfJoinHorizontal = isJoinHorizontal(self);
-
   let roads = [isTop, isRight, isBottom, isLeft];
   let roadCount = roads.filter(Boolean).length;
 
   let roadVal = ["-", "-", "-", "-"];
-  if (roadCount === 2) {
-    if (isSelfJoinHorizontal) roadVal = ["-", self[1][1], "-", self[1][3]];
-    else if (isSelfJoinVertical) roadVal = [self[1][0], "-", self[1][2], "-"];
-    else if ((isTop || isBottom) && (isLeft || isRight)) {
-      let setVertical = "-";
-      if (isTop) {
-        setVertical = isTopMain ? "M" : isTopNormal ? "N" : top[1][2];
-      }
-      if (isBottom) {
-        setVertical = isBottomMain ? "M" : isBottomNormal ? "N" : bottom[1][0];
-      }
-      let setHorizontal = "-";
-      if (isLeft) {
-        setHorizontal = isLeftMain ? "M" : isLeftNormal ? "N" : left[1][1];
-      }
-      if (isRight) {
-        setHorizontal = isRightMain ? "M" : isRightNormal ? "N" : right[1][3];
-      }
 
-      if (setHorizontal !== setVertical) {
-        roadVal = [setVertical, setHorizontal, setVertical, setHorizontal];
-      }
-    }
-  }
   if (isTopMain) roadVal[0] = "M";
   if (isTopNormal) roadVal[0] = "N";
   if (isRightMain) roadVal[1] = "M";
@@ -304,15 +279,66 @@ const handleSetSymbol = async ({
   if (isLeftMain) roadVal[3] = "M";
   if (isLeftNormal) roadVal[3] = "N";
 
-  if (roadCount === 1) {
-    if (isTop) {
-      roadVal[2] = self[1][0] === "-" ? roadVal[0] : self[1][2];
-    } else if (isBottom) {
-      roadVal[0] = self[1][2] === "-" ? roadVal[2] : self[1][2];
-    } else if (isLeft) {
-      roadVal[1] = self[1][3] === "-" ? roadVal[3] : self[1][1];
-    } else if (isRight) {
-      roadVal[3] = self[1][1] === "-" ? roadVal[1] : self[1][3];
+  if (roadCount === 2) {
+    if ((isTopMain || isBottomMain) && (isLeftNormal || isRightNormal)) {
+      roadVal = ["-", "N", "-", "N"];
+      if (isTopMain) roadVal[0] = "M";
+      if (isBottomMain) roadVal[2] = "M";
+    } else if ((isLeftMain || isRightMain) && (isTopNormal || isBottomNormal)) {
+      roadVal = ["N", "-", "N", "-"];
+      if (isLeftMain) roadVal[3] = "M";
+      if (isRightMain) roadVal[1] = "M";
+    }
+  } else if (roadCount === 3 || roadCount === 4) {
+    if (isTopMain && isBottomMain && (isLeftNormal || isRightNormal)) {
+      roadVal = ["M", "N", "M", "N"];
+    } else if (isTopNormal && isBottomNormal && (isLeftMain || isRightMain)) {
+      roadVal = ["N", "M", "N", "M"];
+    } else if (isTop && isBottom && roadVal[0] !== roadVal[2]) {
+      console.log("top and bottom");
+      if (isLeft) roadVal[1] = roadVal[3];
+      else if (isRight) roadVal[3] = roadVal[1];
+    } else if (isLeft && isRight && roadVal[1] !== roadVal[3]) {
+      if (isTop) roadVal[2] = roadVal[0];
+      else if (isBottom) roadVal[0] = roadVal[2];
+    } else if (
+      [
+        `${self[1][0]}${self[1][2]}`,
+        `${self[1][2]}${self[1][0]}`,
+        `${self[1][1]}${self[1][3]}`,
+        `${self[1][3]}${self[1][1]}`,
+      ].includes("MN")
+    ) {
+      roadVal = self[1];
+      if (isLeftNormal || isRightNormal) {
+        roadVal[1] = "N";
+        roadVal[3] = "N";
+      } else if (isLeftMain || isRightMain) {
+        roadVal[1] = "M";
+        roadVal[3] = "M";
+      } else if (isTopNormal || isBottomNormal) {
+        roadVal[0] = "N";
+        roadVal[2] = "N";
+      } else if (isTopMain || isBottomMain) {
+        roadVal[0] = "M";
+        roadVal[2] = "M";
+      }
+    }
+  } else if (roadCount === 1) {
+    const selfRoadVal = self[1].filter((r) => r !== "-");
+    if (isTop || isBottom) {
+      roadVal = [selfRoadVal[0], "-", selfRoadVal[1], "-"];
+    } else if (isLeft || isRight) {
+      roadVal = ["-", selfRoadVal[0], "-", selfRoadVal[1]];
+    }
+    if (isTop && top[1][2] !== "-") {
+      roadVal[0] = top[1][2];
+    } else if (isBottom && bottom[1][0] !== "-") {
+      roadVal[2] = bottom[1][0];
+    } else if (isLeft && left[1][1] !== "-") {
+      roadVal[3] = left[1][1];
+    } else if (isRight && right[1][3] !== "-") {
+      roadVal[1] = right[1][3];
     }
   } else if (roadCount === 0) {
     roadVal = [self[1][0], self[1][3], self[1][0], self[1][3]];
@@ -330,9 +356,16 @@ const handleSetSymbol = async ({
   ) {
     roadGrids[row][col] = [assignName, roadVal];
     if (roadMesh) deleteMesh(roadMesh);
-    const { modelUrl, rotation } = getRoadDetails(assignName);
-    addRoadMesh({ position, name: assignName, modelUrl, rotation });
+    const { modelUrl, rotation, scale } = getRoadDetails(assignName);
+    addRoadMesh({ position, name: assignName, modelUrl, rotation, scale });
   }
+};
+
+const rotateRoadValToHorizontal = (roadVal) => {
+  if (roadVal[0] !== "-" && roadVal[2] !== "-") {
+    return ["-", roadVal[0], "-", roadVal[2]];
+  }
+  return roadVal;
 };
 
 const handleAddRoadToGrid = ({
@@ -352,61 +385,10 @@ const handleAddRoadToGrid = ({
     roadGrids,
   });
 
-  roadGrids[row][col] = [
-    isSelf ? " " : type === "Main" ? "━" : "─",
-    ["-", type === "Main" ? "M" : "N", "-", type === "Main" ? "M" : "N"],
-  ];
-  if (isTop)
-    handleSetSymbol({
-      col,
-      row: row - 1,
-      roadGrids,
-      position: { ...position, z: position.z - 1 },
-      addRoadMesh,
-      findMesh,
-      deleteMesh,
-    }); // top
-  if (isRight)
-    handleSetSymbol({
-      col: col + 1,
-      row,
-      roadGrids,
-      position: { ...position, x: position.x + 1 },
-      addRoadMesh,
-      findMesh,
-      deleteMesh,
-    }); // right
-  if (isBottom)
-    handleSetSymbol({
-      col,
-      row: row + 1,
-      roadGrids,
-      position: { ...position, z: position.z + 1 },
-      addRoadMesh,
-      findMesh,
-      deleteMesh,
-    }); // bottom
-  if (isLeft)
-    handleSetSymbol({
-      col: col - 1,
-      row,
-      roadGrids,
-      position: { ...position, x: position.x - 1 },
-      addRoadMesh,
-      findMesh,
-      deleteMesh,
-    }); // left
-  if (!isSelf)
-    handleSetSymbol({
-      col,
-      row,
-      roadGrids,
-      position,
-      addRoadMesh,
-      findMesh,
-      deleteMesh,
-    });
+  const executeRoad = [];
+
   if (isSelf) {
+    roadGrids[row][col] = [" ", ["-", "-", "-", "-"]];
     const roadMesh = findMesh({
       position,
       notInCludeName: ["Building", "Preview Road"],
@@ -414,6 +396,74 @@ const handleAddRoadToGrid = ({
     deleteMesh(roadMesh);
     addGrass({ position });
   }
+
+  if (isTop) {
+    executeRoad.push({
+      col,
+      row: row - 1,
+      position: { ...position, z: position.z - 1 },
+      intersects: countIntersect({ col, row: row - 1, roadGrids }),
+    });
+  }
+  if (isRight) {
+    executeRoad.push({
+      col: col + 1,
+      row,
+      position: { ...position, x: position.x + 1 },
+      intersects: countIntersect({ col: col + 1, row, roadGrids }),
+    });
+  }
+  if (isBottom) {
+    executeRoad.push({
+      col,
+      row: row + 1,
+      position: { ...position, z: position.z + 1 },
+      intersects: countIntersect({ col, row: row + 1, roadGrids }),
+    });
+  }
+  if (isLeft) {
+    executeRoad.push({
+      col: col - 1,
+      row,
+      position: { ...position, x: position.x - 1 },
+      intersects: countIntersect({ col: col - 1, row, roadGrids }),
+    });
+  }
+  if (!isSelf) {
+    roadGrids[row][col] = [
+      isSelf ? " " : type === "Main" ? "━" : "─",
+      ["-", type === "Main" ? "M" : "N", "-", type === "Main" ? "M" : "N"],
+    ];
+    executeRoad.push({
+      col,
+      row,
+      position,
+      intersects: countIntersect({ col, row, roadGrids }),
+    });
+  }
+  executeRoad.sort((a, b) => (a.intersects - b.intersects ? -1 : 1));
+  executeRoad.forEach(({ col, row, position }) => {
+    handleSetSymbol({
+      col,
+      row,
+      roadGrids,
+      position,
+      addRoadMesh,
+      findMesh,
+      deleteMesh,
+    });
+  });
+};
+
+const countIntersect = ({ col, row, roadGrids }) => {
+  const { isTop, isRight, isBottom, isLeft } = getNeightborRoad({
+    col,
+    row,
+    roadGrids,
+  });
+
+  let intersects = [isTop, isRight, isBottom, isLeft];
+  return intersects.filter(Boolean).length;
 };
 
 const getNeightborRoad = ({ col, row, roadGrids }) => {

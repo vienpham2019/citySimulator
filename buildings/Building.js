@@ -56,6 +56,7 @@ export default class Building {
           mesh.traverse((obj) => {
             if (obj.material) {
               obj.receiveShadow = true;
+
               if (this.isPreview) {
                 obj.material.color.set(new THREE.Color(0x808080));
               } else {
