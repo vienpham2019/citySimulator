@@ -82,53 +82,35 @@ const AssignRoadMap = {
   "--NN": "┐",
 };
 
-const roadUrls = [
-  "../models/roads/tile-mainroad-curve.glb", // 0
-  "../models/roads/tile-mainroad-intersection.glb", // 1
-  "../models/roads/tile-mainroad-intersection-t.glb", // 2
-  "../models/roads/tile-mainroad-road-intersection-t.glb", // 3
-  "../models/roads/tile-mainroad-road-intersection.glb", // 4
-  "../models/roads/tile-mainroad-straight.glb", // 5
-  "../models/roads/tile-road-curve.glb", // 6
-  "../models/roads/tile-road-intersection-t.glb", // 7
-  "../models/roads/tile-road-mainroad-intersection-t.glb", // 8
-  "../models/roads/tile-road-mainroad-intersection.glb", // 9
-  "../models/roads/tile-road-straight.glb", // 10
-  "../models/roads/tile-road-to-mainroad-intersection-t.glb", // 11
-  "../models/roads/tile-road-to-mainroad.glb", // 12
-  "../models/roads/tile-roads-mainroad-intersection.glb", // 13
-  "../models/roads/tile-road-intersection.glb", // 14
-];
 const getRoadDetails = (sign) => {
   const rotation = { x: 0, y: 0, z: 0 };
   const scale = { x: 1, y: 1, z: 1 };
   const roadUrls = {
-    "╋": "../models/roads/tile-mainroad-intersection.glb",
-    "┳┫┻┣": "../models/roads/tile-mainroad-intersection-t.glb",
+    // Straight
     "┃━": "../models/roads/tile-mainroad-straight.glb",
-    "┗┛┏┓": "../models/roads/tile-mainroad-curve.glb",
-    "┼": "../models/roads/tile-road-intersection.glb",
-    "┬┤┴├": "../models/roads/tile-road-intersection-t.glb",
     "│─": "../models/roads/tile-road-straight.glb",
-    "└┘┌┐": "../models/roads/tile-road-curve.glb",
     "╿╽╼╾": "../models/roads/tile-road-to-mainroad.glb",
-    "┰┥┸┝": "../models/roads/tile-mainroad-road-intersection-t.glb",
+    // Curve
+    "└┘┌┐": "../models/roads/tile-road-curve.glb",
+    "┗┛┏┓": "../models/roads/tile-mainroad-curve.glb",
+    // Intersect
+    "╋": "../models/roads/tile-mainroad-intersection.glb",
+    "┼": "../models/roads/tile-road-intersection.glb",
     "╊╉╈╇": "../models/roads/tile-mainroad-road-intersection.glb",
     "╁╀┾┽": "../models/roads/tile-roads-mainroad-intersection.glb",
-    "┯┨┷┠": "../models/roads/tile-road-mainroad-intersection-t.glb",
     "╂┿": "../models/roads/tile-road-mainroad-intersection.glb",
-    "┭┦┶┟": "../models/roads/tile-road-to-mainroad-intersection-t.glb",
-    "┵┞┮┧": "../models/roads/tile-road-to-mainroad-intersection-t.glb",
-  };
-  const roadRotation = {
-    "╋┼┳┬┃│┏┌╿┰╊┯╂┭┵╀": { ...rotation },
-    "┣├━─┗└╾┝╇┠┟┧┿┽": { ...rotation, y: 90 },
-    "┻┴┛┘╽┸╉┷┶┮╁": { ...rotation, y: 180 },
-    "┫┤┓┐╼┥╈┨┦┞┾": { ...rotation, y: 270 },
+    // T intersect
+    "┯┨┷┠": "../models/roads/tile-road-mainroad-intersection-t.glb",
+    "┰┥┸┝": "../models/roads/tile-mainroad-road-intersection-t.glb",
+    "┳┫┻┣": "../models/roads/tile-mainroad-intersection-t.glb",
+    "┬┤┴├": "../models/roads/tile-road-intersection-t.glb",
   };
 
-  const roadScale = {
-    "┵┞┮┧": { ...scale, z: -1 },
+  const roadRotation = {
+    "┃│╿┏┌╋┼╂╀┳┬┰┯": { ...rotation },
+    "┣├━─┗└╾┝╇┠┿┽": { ...rotation, y: 90 },
+    "┻┴┛┘╽┸╉┷╁": { ...rotation, y: 180 },
+    "┫┤┓┐╼┥╈┨┾": { ...rotation, y: 270 },
   };
   const result = { modelUrl: null, rotation: null };
   for (const key in roadUrls) {
@@ -141,13 +123,6 @@ const getRoadDetails = (sign) => {
   for (const key in roadRotation) {
     if (key.includes(sign)) {
       result.rotation = roadRotation[key];
-      break;
-    }
-  }
-  result.scale = scale;
-  for (const key in roadScale) {
-    if (key.includes(sign)) {
-      result.scale = roadScale[key];
       break;
     }
   }
@@ -180,9 +155,9 @@ const printGrid = (grid) => {
 const isRoad = (road) => road !== null && road[0] !== " ";
 
 const isRoadMainOrNormal = ({ type, indexs, road }) => {
+  if (!isRoad(road)) return false;
   const roadVal = road[1].filter((r) => r !== "-");
   const roadCount = roadVal.length;
-
   if (roadCount === 2 && roadVal.every((r) => r === type)) return true;
   else {
     return (
@@ -232,7 +207,6 @@ const handleSetSymbol = async ({
     indexs: [3, 0, 2],
     road: right,
   });
-  console.log(isRightMain);
   const isBottomMain = isRoadMainOrNormal({
     type: "M",
     indexs: [0, 1, 3],
@@ -243,7 +217,6 @@ const handleSetSymbol = async ({
     indexs: [1, 0, 2],
     road: left,
   });
-  console.log(isLeftMain);
   const isTopNormal = isRoadMainOrNormal({
     type: "N",
     indexs: [2, 1, 3],
@@ -289,25 +262,20 @@ const handleSetSymbol = async ({
       if (isLeftMain) roadVal[3] = "M";
       if (isRightMain) roadVal[1] = "M";
     }
-  } else if (roadCount === 3 || roadCount === 4) {
+  }
+  if (roadCount === 3) {
     if (isTopMain && isBottomMain && (isLeftNormal || isRightNormal)) {
       roadVal = ["M", "N", "M", "N"];
     } else if (isTopNormal && isBottomNormal && (isLeftMain || isRightMain)) {
       roadVal = ["N", "M", "N", "M"];
-    } else if (isTop && isBottom && roadVal[0] !== roadVal[2]) {
-      console.log("top and bottom");
-      if (isLeft) roadVal[1] = roadVal[3];
-      else if (isRight) roadVal[3] = roadVal[1];
-    } else if (isLeft && isRight && roadVal[1] !== roadVal[3]) {
-      if (isTop) roadVal[2] = roadVal[0];
-      else if (isBottom) roadVal[0] = roadVal[2];
-    } else if (
-      [
-        `${self[1][0]}${self[1][2]}`,
-        `${self[1][2]}${self[1][0]}`,
-        `${self[1][1]}${self[1][3]}`,
-        `${self[1][3]}${self[1][1]}`,
-      ].includes("MN")
+    }
+  }
+
+  if (roadCount === 3 || roadCount === 4) {
+    if (
+      [`${self[1][0]}${self[1][2]}`, `${self[1][2]}${self[1][0]}`].includes(
+        "MN"
+      )
     ) {
       roadVal = self[1];
       if (isLeftNormal || isRightNormal) {
@@ -316,15 +284,31 @@ const handleSetSymbol = async ({
       } else if (isLeftMain || isRightMain) {
         roadVal[1] = "M";
         roadVal[3] = "M";
-      } else if (isTopNormal || isBottomNormal) {
+      }
+      console.log("selfJoin", roadVal);
+    } else if (
+      [`${self[1][1]}${self[1][3]}`, `${self[1][3]}${self[1][1]}`].includes(
+        "MN"
+      )
+    ) {
+      roadVal = self[1];
+      if (isTopNormal || isBottomNormal) {
         roadVal[0] = "N";
         roadVal[2] = "N";
       } else if (isTopMain || isBottomMain) {
         roadVal[0] = "M";
         roadVal[2] = "M";
       }
+      console.log("selfJoin horizontal", roadVal, isTopNormal);
+    } else if (isTop && isBottom && roadVal[0] !== roadVal[2]) {
+      if (isLeft) roadVal[1] = roadVal[3];
+      else if (isRight) roadVal[3] = roadVal[1];
+    } else if (isLeft && isRight && roadVal[1] !== roadVal[3]) {
+      if (isTop) roadVal[2] = roadVal[0];
+      else if (isBottom) roadVal[0] = roadVal[2];
     }
-  } else if (roadCount === 1) {
+  }
+  if (roadCount === 1) {
     const selfRoadVal = self[1].filter((r) => r !== "-");
     if (isTop || isBottom) {
       roadVal = [selfRoadVal[0], "-", selfRoadVal[1], "-"];
@@ -340,14 +324,15 @@ const handleSetSymbol = async ({
     } else if (isRight && right[1][3] !== "-") {
       roadVal[1] = right[1][3];
     }
-  } else if (roadCount === 0) {
+  }
+  if (roadCount === 0) {
     roadVal = [self[1][0], self[1][3], self[1][0], self[1][3]];
   }
 
   const assignName = AssignRoadMap[roadVal.join("")];
   const roadMesh = findMesh({
     position,
-    notInCludeName: ["Building", "Preview Road"],
+    notInCludeName: ["Building", "Preview Road", "Vehicle", "Arrow"],
   });
   if (
     !roadMesh ||
@@ -430,10 +415,11 @@ const handleAddRoadToGrid = ({
     });
   }
   if (!isSelf) {
-    roadGrids[row][col] = [
-      isSelf ? " " : type === "Main" ? "━" : "─",
-      ["-", type === "Main" ? "M" : "N", "-", type === "Main" ? "M" : "N"],
-    ];
+    // roadGrids[row][col] = [
+    //   isSelf ? " " : type === "Main" ? "━" : "─",
+    //   ["-", type === "Main" ? "M" : "N", "-", type === "Main" ? "M" : "N"],
+    // ];
+    roadGrids[row][col] = ["━", ["-", "M", "-", "M"]];
     executeRoad.push({
       col,
       row,

@@ -8,6 +8,9 @@ import {
   printGrid,
 } from "./helper/road.js";
 import Road from "./buildings/Road.js";
+import Vehicle from "./buildings/Vehicle.js";
+import Geometry from "./Geometry.js";
+import { getPoints } from "./helper/point.js";
 const w = window.innerWidth;
 const h = window.innerHeight;
 
@@ -37,55 +40,141 @@ export default class Scene {
     this.buildingsToGrow = [];
     this.hoverObjects = [];
     this.previewModel = null;
+    this.vehicles = [];
   }
 
   async init() {
-    // this.previewModel = await Road.create({
+    // this.previewModel = await Vehicle.create({
     //   x: 0,
     //   y: 0,
-    //   isPreview: true,
     // });
     // this.scene.add(this.previewModel.mesh);
   }
 
   async setUpPlatform({ width, length }) {
-    const roads = [
-      "../models/roads/tile-mainroad-curve.glb", // 0
-      "../models/roads/tile-mainroad-intersection.glb", // 1
-      "../models/roads/tile-mainroad-intersection-t.glb", // 2
-      "../models/roads/tile-mainroad-road-intersection-t.glb", // 3
-      "../models/roads/tile-mainroad-road-intersection.glb", // 4
-      "../models/roads/tile-mainroad-straight.glb", // 5
-      "../models/roads/tile-road-curve.glb", // 6
-      "../models/roads/tile-road-intersection-t.glb", // 7
-      "../models/roads/tile-road-mainroad-intersection-t.glb", // 8
-      "../models/roads/tile-road-mainroad-intersection.glb", // 9
-      "../models/roads/tile-road-straight.glb", // 10
-      "../models/roads/tile-road-to-mainroad-intersection-t.glb", // 11
-      "../models/roads/tile-road-to-mainroad.glb", // 12
-      "../models/roads/tile-roads-mainroad-intersection.glb", // 13
-      "../models/roads/tile-road-intersection.glb", // 14
-    ];
-    let r = 0;
     for (let x = 0; x < width; x++) {
       this.roadGrids[x] = [];
       for (let y = 0; y < length; y++) {
         let x_pos = x - Math.floor(width / 2);
         let y_pos = y - Math.floor(length / 2);
         const grass = new Grass({ x: x_pos, y: y_pos });
-        // if (r < roads.length) {
-        //   const newRoad = await Road.create({
-        //     position: { x: x_pos, z: y_pos },
-        //     modelUrl: `${roads[r++]}`,
-        //     // scale: { x: 1, y: 1, z: -1 },
-        //   });
-        //   newRoad.setRotate({ x: 0, y: 90, z: 0 });
-        //   this.scene.add(newRoad.mesh);
-        // }
+
         this.roadGrids[x][y] = [" ", ["", "", "", ""]];
         this.scene.add(grass.mesh);
       }
     }
+    const vehicle = await Vehicle.create({
+      position: { x: 0, y: 0 },
+    });
+    // this.vehicles.push(vehicle);
+    const arrow = Geometry.arrow({
+      position: { x: -0.45, y: 0, z: 0.16 },
+    });
+    const arrow2 = Geometry.arrow({
+      position: { x: -0.45, y: 0, z: 0.05 },
+    });
+    const arrow4 = Geometry.arrow({
+      position: { x: 0.45, y: 0, z: -0.05 },
+      yRotation: 180,
+    });
+
+    const arrowPoints1 = [
+      { x: 0.5, y: -0.16, length: 1, yRotation: 180 },
+      { x: 0.84, y: -1.5, length: 1, yRotation: 270 },
+    ];
+
+    const arrPoints = getPoints({
+      a: { x: 0.34, y: 0 },
+      b: { x: 0, y: -0.1 },
+      angle: 90,
+      deviceTo: 4,
+    });
+    arrPoints.forEach(({ x, y, length, angle }) => {
+      arrowPoints1.push({
+        x,
+        y,
+        length,
+        yRotation: -angle,
+      });
+    });
+
+    const arrowPoints2 = [
+      { x: 0.5, y: -0.05, length: 1, yRotation: 180 },
+      { x: 0.95, y: -1.5, length: 1, yRotation: 270 },
+    ];
+
+    const arrPoints2 = getPoints({
+      a: { x: 0.45, y: 0 },
+      b: { x: 0, y: -0.11 },
+      angle: 90,
+      deviceTo: 5,
+    });
+    arrPoints2.forEach(({ x, y, length, angle }) => {
+      arrowPoints2.push({
+        x,
+        y,
+        length,
+        yRotation: -angle,
+      });
+    });
+
+    const arrowPoints3 = [
+      { x: -0.5, y: 0.05, length: 1, yRotation: 0 },
+      { x: 1.05, y: -0.5, length: 1, yRotation: 90 },
+    ];
+
+    const arrPoints3 = getPoints({
+      a: { x: 0.55, y: 0 },
+      b: { x: 0, y: 0.1 },
+      angle: 90,
+      deviceTo: 5,
+      direction: -1,
+    });
+    arrPoints3.forEach(({ x, y, length, angle }) => {
+      arrowPoints3.push({
+        x,
+        y,
+        length,
+        yRotation: -angle,
+      });
+    });
+
+    const arrowPoints4 = [
+      { x: -0.5, y: 0.16, length: 1, yRotation: 0 },
+      { x: 1.17, y: -0.5, length: 1, yRotation: 90 },
+    ];
+
+    const arrPoints4 = getPoints({
+      a: { x: 0.66, y: 0 },
+      b: { x: 0, y: 0.1 },
+      angle: 90,
+      deviceTo: 5,
+      direction: -1,
+    });
+    arrPoints4.forEach(({ x, y, length, angle }) => {
+      arrowPoints4.push({
+        x,
+        y,
+        length,
+        yRotation: -angle,
+      });
+    });
+
+    const points = [
+      ...arrowPoints1,
+      ...arrowPoints2,
+      ...arrowPoints3,
+      ...arrowPoints4,
+    ];
+    points.forEach(({ x, y, length, yRotation }) => {
+      this.scene.add(
+        Geometry.arrow({
+          position: { x, y: 0, z: y },
+          yRotation,
+          length,
+        })
+      );
+    });
   }
 
   setupLights({ width, length }) {
@@ -110,6 +199,7 @@ export default class Scene {
   }
 
   draw = () => {
+    this.vehicles.forEach((vc) => vc.move());
     this.renderer.render(this.scene, this.camera);
   };
 
@@ -162,12 +252,11 @@ export default class Scene {
     printGrid(this.roadGrids);
   }
 
-  async addRoadMesh({ position, name, modelUrl, rotation, scale }) {
+  async addRoadMesh({ position, name, modelUrl, rotation }) {
     const newRoad = await Road.create({
       position,
       name,
       modelUrl,
-      scale,
     });
     newRoad.setRotate(rotation);
     this.scene.add(newRoad.mesh);

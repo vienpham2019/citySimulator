@@ -21,7 +21,7 @@ export default class Road extends Building {
   }) {
     position = {
       x: position.x + Road.offset.x,
-      y: 0.2,
+      y: 0,
       z: position.z + Road.offset.y,
     };
     const obj = await super.create({
