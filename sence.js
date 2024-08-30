@@ -14,6 +14,7 @@ import { getPoints } from "./helper/point.js";
 import { straightNode } from "./node/straightNode.js";
 import { curveNode } from "./node/curveNode.js";
 import { TIntersectNode } from "./node/TIntersectNode.js";
+import { IntersectNode } from "./node/intersectNode.js";
 const w = window.innerWidth;
 const h = window.innerHeight;
 
@@ -71,9 +72,7 @@ export default class Scene {
     });
     // this.vehicles.push(vehicle);
 
-    const points = [
-      ...TIntersectNode({ angle: 270, location: { x: 0, y: -1 } }),
-    ];
+    const points = [...IntersectNode({ location: { x: 0, y: -1 } })];
     points.forEach(({ x, y, length, yRotation }) => {
       this.scene.add(
         Geometry.arrow({
