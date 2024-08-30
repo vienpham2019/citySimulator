@@ -9,27 +9,15 @@ const getPoints = ({
   const { x: x1, y: y1 } = a;
   const { x: x2, y: y2 } = b;
   const radius = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
-  let currentAngle = direction === 1 ? angle / deviceTo : angle;
+  let currentAngle = direction === 1 ? 0 : 90;
   const result = [];
-  if (direction === 1) {
-    result.push({
-      x: x1 + offset.x,
-      y: y1 + offset.y,
-    });
-  }
-  for (let i = 0; i < deviceTo; i++) {
-    const radians = currentAngle * (Math.PI / 180);
+  for (let i = 0; i < deviceTo + 1; i++) {
+    const radians = (currentAngle + angle) * (Math.PI / 180);
     result.push({
       x: parseFloat((radius * Math.cos(radians)).toFixed(2)) + offset.x,
       y: parseFloat((radius * Math.sin(radians)).toFixed(2)) + offset.y,
     });
-    currentAngle += (angle / deviceTo) * direction;
-  }
-  if (direction === -1) {
-    result.push({
-      x: x1 + offset.x,
-      y: y1 + offset.y,
-    });
+    currentAngle += (90 / deviceTo) * direction;
   }
   return calculateDistancesAndAngles(result);
 };

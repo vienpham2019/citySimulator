@@ -11,6 +11,9 @@ import Road from "./buildings/Road.js";
 import Vehicle from "./buildings/Vehicle.js";
 import Geometry from "./Geometry.js";
 import { getPoints } from "./helper/point.js";
+import { straightNode } from "./node/straightNode.js";
+import { curveNode } from "./node/curveNode.js";
+import { TIntersectNode } from "./node/TIntersectNode.js";
 const w = window.innerWidth;
 const h = window.innerHeight;
 
@@ -67,104 +70,9 @@ export default class Scene {
       position: { x: 0, y: 0 },
     });
     // this.vehicles.push(vehicle);
-    const arrow = Geometry.arrow({
-      position: { x: -0.45, y: 0, z: 0.16 },
-    });
-    const arrow2 = Geometry.arrow({
-      position: { x: -0.45, y: 0, z: 0.05 },
-    });
-    const arrow4 = Geometry.arrow({
-      position: { x: 0.45, y: 0, z: -0.05 },
-      yRotation: 180,
-    });
-
-    const arrowPoints1 = [
-      { x: 0.5, y: -0.16, length: 1, yRotation: 180 },
-      { x: 0.84, y: -1.5, length: 1, yRotation: 270 },
-    ];
-
-    const arrPoints = getPoints({
-      a: { x: 0.34, y: 0 },
-      b: { x: 0, y: -0.1 },
-      angle: 90,
-      deviceTo: 4,
-    });
-    arrPoints.forEach(({ x, y, length, angle }) => {
-      arrowPoints1.push({
-        x,
-        y,
-        length,
-        yRotation: -angle,
-      });
-    });
-
-    const arrowPoints2 = [
-      { x: 0.5, y: -0.05, length: 1, yRotation: 180 },
-      { x: 0.95, y: -1.5, length: 1, yRotation: 270 },
-    ];
-
-    const arrPoints2 = getPoints({
-      a: { x: 0.45, y: 0 },
-      b: { x: 0, y: -0.11 },
-      angle: 90,
-      deviceTo: 5,
-    });
-    arrPoints2.forEach(({ x, y, length, angle }) => {
-      arrowPoints2.push({
-        x,
-        y,
-        length,
-        yRotation: -angle,
-      });
-    });
-
-    const arrowPoints3 = [
-      { x: -0.5, y: 0.05, length: 1, yRotation: 0 },
-      { x: 1.05, y: -0.5, length: 1, yRotation: 90 },
-    ];
-
-    const arrPoints3 = getPoints({
-      a: { x: 0.55, y: 0 },
-      b: { x: 0, y: 0.1 },
-      angle: 90,
-      deviceTo: 5,
-      direction: -1,
-    });
-    arrPoints3.forEach(({ x, y, length, angle }) => {
-      arrowPoints3.push({
-        x,
-        y,
-        length,
-        yRotation: -angle,
-      });
-    });
-
-    const arrowPoints4 = [
-      { x: -0.5, y: 0.16, length: 1, yRotation: 0 },
-      { x: 1.17, y: -0.5, length: 1, yRotation: 90 },
-    ];
-
-    const arrPoints4 = getPoints({
-      a: { x: 0.66, y: 0 },
-      b: { x: 0, y: 0.1 },
-      angle: 90,
-      deviceTo: 5,
-      direction: -1,
-    });
-    arrPoints4.forEach(({ x, y, length, angle }) => {
-      arrowPoints4.push({
-        x,
-        y,
-        length,
-        yRotation: -angle,
-      });
-    });
 
     const points = [
-      ...arrowPoints1,
-      ...arrowPoints2,
-      ...arrowPoints3,
-      ...arrowPoints4,
+      ...TIntersectNode({ angle: 270, location: { x: 0, y: -1 } }),
     ];
     points.forEach(({ x, y, length, yRotation }) => {
       this.scene.add(

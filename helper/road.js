@@ -364,6 +364,7 @@ const handleAddRoadToGrid = ({
   deleteMesh,
   addGrass,
 }) => {
+  console.log(position);
   const { isTop, isRight, isBottom, isLeft, isSelf } = getNeightborRoad({
     col,
     row,
