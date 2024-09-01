@@ -10,7 +10,7 @@ import {
 import Road from "./buildings/Road.js";
 import Vehicle from "./buildings/Vehicle.js";
 import Geometry from "./Geometry.js";
-import { getPoints } from "./helper/point.js";
+import { calculateDistanceAndAngle, getPoints } from "./helper/point.js";
 import { straightNode } from "./node/straightNode.js";
 import { curveNode } from "./node/curveNode.js";
 import { TIntersectNode } from "./node/TIntersectNode.js";
@@ -70,18 +70,88 @@ export default class Scene {
     const vehicle = await Vehicle.create({
       position: { x: 0, y: 0 },
     });
-    // this.vehicles.push(vehicle);
 
-    const points = [...IntersectNode({ location: { x: 0, y: -1 } })];
-    points.forEach(({ x, y, length, yRotation }) => {
-      this.scene.add(
-        Geometry.arrow({
-          position: { x, y: 0, z: y },
-          yRotation,
-          length,
-        })
-      );
+    // this.vehicles.push(vehicle);
+    const printNodeAndChildren = ({ color = "White", node }) => {
+      const colors = {
+        Red: "#FF0000",
+        Green: "#00FF00",
+        White: "#FFFFFF",
+      };
+      if (node.isEndNode()) {
+        color = "Red";
+      }
+      // Recursively print the children nodes
+      const { location: nodeLocation } = node;
+      const point = Geometry.point({
+        position: nodeLocation,
+        color: colors[color],
+      });
+      this.scene.add(point);
+      node.children.forEach((child) => {
+        const { location: childLocation } = child;
+        const { length, angle } = calculateDistanceAndAngle({
+          location1: nodeLocation,
+          location2: childLocation,
+        });
+
+        this.scene.add(
+          Geometry.arrow({
+            position: nodeLocation,
+            yRotation: -angle,
+            length,
+            color: colors[color],
+          })
+        );
+        this.scene.remove(point);
+        printNodeAndChildren({ node: child });
+      });
+      return node;
+    };
+    const nodes1 = straightNode({
+      isIntersect: true,
+      isVertical: true,
+      location: { x: 1, y: -4 },
     });
+    const nodes5 = straightNode({
+      isIntersect: true,
+      isVertical: true,
+      location: { x: 1, y: -2 },
+    });
+    const nodes6 = straightNode({
+      isIntersect: true,
+      isVertical: false,
+      location: { x: 0, y: -3 },
+    });
+    const nodes2 = curveNode({ angle: 360, location: { x: 0, y: -1 } });
+    const nodes3 = curveNode({ angle: 90, location: { x: 0, y: -1 } });
+    const node4 = TIntersectNode({ angle: 0, location: { x: 1, y: -3 } });
+    node4.top[2].addChild(nodes1[2]);
+    node4.top[3].addChild(nodes1[3]);
+    nodes1[0].endNode.addChild(node4.top[0]);
+    nodes1[1].endNode.addChild(node4.top[1]);
+    node4.bottom[0].addChild(nodes5[0]);
+    node4.bottom[1].addChild(nodes5[1]);
+    nodes5[2].endNode.addChild(node4.bottom[2]);
+    nodes5[3].endNode.addChild(node4.bottom[3]);
+    node4.left[0].addChild(nodes6[0]);
+    node4.left[1].addChild(nodes6[1]);
+    nodes6[2].endNode.addChild(node4.left[2]);
+    nodes6[3].endNode.addChild(node4.left[3]);
+    let points = [...nodes5, ...nodes6, nodes1[0], nodes1[1], ...node4.roots];
+    points = points.filter((n) => n.isParent);
+    points.forEach((node) => {
+      printNodeAndChildren({ color: "Green", node });
+    });
+    // points.forEach(({ x, y, length, yRotation }, i) => {
+    //   this.scene.add(
+    //     Geometry.arrow({
+    //       position: { x, y: 0, z: y },
+    //       yRotation,
+    //       length,
+    //     })
+    //   );
+    // });
   }
 
   setupLights({ width, length }) {

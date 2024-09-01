@@ -37,8 +37,42 @@ export default class Geometry {
     return new THREE.Mesh(geometry, material);
   }
 
+  static cylinder({
+    height = 1,
+    radiusTop = 0.02,
+    radiusBottom = 0.02,
+    radialSegments = 10,
+    color = 0xffffff,
+  }) {
+    const geometry = new THREE.CylinderGeometry(
+      radiusTop,
+      radiusBottom,
+      height,
+      radialSegments
+    );
+    const material = new THREE.MeshBasicMaterial({ color });
+
+    const cylinder = new THREE.Mesh(geometry, material);
+
+    return cylinder;
+  }
+
+  static point({ position = { x: 0, y: 0 }, radius = 0.02, color = 0xffffff }) {
+    const sphere = Geometry.sphere({
+      height: 16,
+      width: 32,
+      radius, // Use the radius parameter
+      color,
+    });
+
+    sphere.position.set(position.x, 0, position.y);
+    sphere.name = "Point";
+
+    return sphere;
+  }
+
   static arrow({
-    position = { x: 0, y: 0, z: 0 },
+    position = { x: 0, z: 0 },
     length = 1,
     yRotation = 0,
     color = 0xffffff,
@@ -49,14 +83,14 @@ export default class Geometry {
       radius: 0.02,
       color,
     });
-    sphere.position.set(position.x, position.y, position.z);
+    sphere.position.set(position.x, 0, position.y);
     const cone = Geometry.cone({
-      height: length,
+      height: length - 0.01,
       radialSegments: 10,
       radius: 0.02,
-      color,
+      color: 0xffffff,
     });
-    cone.position.set(length / 2, 0, 0);
+    cone.position.set(length / 2 + 0.01, 0, 0);
     cone.rotation.z = -Math.PI / 2;
 
     sphere.rotation.y = yRotation * (Math.PI / 180);

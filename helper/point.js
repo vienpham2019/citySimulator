@@ -19,7 +19,7 @@ const getPoints = ({
     });
     currentAngle += (90 / deviceTo) * direction;
   }
-  return calculateDistancesAndAngles(result);
+  return result;
 };
 
 const calculateDistancesAndAngles = (points) => {
@@ -47,4 +47,20 @@ const calculateDistancesAndAngles = (points) => {
   return lengthsAndAngles;
 };
 
-export { getPoints };
+const calculateDistanceAndAngle = ({ location1, location2 }) => {
+  const { x: x1, y: y1 } = location1;
+  const { x: x2, y: y2 } = location2;
+
+  // Calculate distance between points
+  const length = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
+
+  // Calculate angle between points
+  const angleRadians = Math.atan2(y2 - y1, x2 - x1);
+  const angleDegrees = angleRadians * (180 / Math.PI);
+  return {
+    length: parseFloat(length.toFixed(2)),
+    angle: parseFloat(angleDegrees.toFixed(2)),
+  };
+};
+
+export { getPoints, calculateDistanceAndAngle };

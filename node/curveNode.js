@@ -1,6 +1,7 @@
 import { getPoints } from "../helper/point.js";
+import { Node } from "./node.js";
 
-const curveNode = ({ angle = 90, location }) => {
+const curveNode = ({ angle = 90, location, rootNodes = [], endNodes = [] }) => {
   let result = [];
   const offset = { x: -1, y: 1 };
   if (angle === 90) {
@@ -45,17 +46,31 @@ const curveNode = ({ angle = 90, location }) => {
     },
   ];
 
-  arrPoints.forEach((p) => {
-    result.push(
-      ...getPoints(p).map(({ x, y, length, angle }) => {
-        return {
-          x: x + location.x + offset.x,
-          y: y + location.y + offset.y,
-          length,
-          yRotation: -angle,
-        };
-      })
-    );
+  arrPoints.forEach((p, i) => {
+    let rootNode = null;
+    let currentNode = null;
+    const points = getPoints(p);
+    points.map(({ x, y }, p_i) => {
+      let newNode = new Node({
+        location: {
+          x: parseFloat(x + location.x + offset.x).toFixed(2),
+          y: parseFloat(y + location.y + offset.y).toFixed(2),
+        },
+      });
+      if (rootNode === null) {
+        rootNode = rootNodes[i] || newNode;
+        currentNode = rootNode;
+      } else {
+        if (p_i === points.length - 1) {
+          if (endNodes[i]) newNode = endNodes[i];
+          if (rootNode.endNode === null) rootNode.setEndNode(newNode);
+        }
+        currentNode.addChild(newNode);
+        currentNode = newNode;
+      }
+    });
+
+    result.push(rootNode);
   });
 
   return result;
