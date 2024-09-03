@@ -114,8 +114,22 @@ const straightNode = ({ isVertical = false, isIntersect = true, location }) => {
     result[2].addChild(result[3].children[0]);
     result[3].addChild(result[2].children[0]);
   }
-
-  return result;
+  const [s1, s2, s3, s4] = result;
+  if (isVertical) {
+    return {
+      location,
+      top: [s1, s2, s3.endNode, s4.endNode],
+      bottom: [s1.endNode, s2.endNode, s3, s4],
+      roots: result,
+    };
+  } else {
+    return {
+      location,
+      right: [s1, s2, s3.endNode, s4.endNode],
+      left: [s1.endNode, s2.endNode, s3, s4],
+      roots: result,
+    };
+  }
 };
 
 export { straightNode };

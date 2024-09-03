@@ -108,37 +108,80 @@ export default class Scene {
       });
       return node;
     };
-    const nodes1 = straightNode({
-      isIntersect: true,
-      isVertical: true,
-      location: { x: 1, y: -4 },
-    });
-    const nodes5 = straightNode({
+    const straightTop = straightNode({
       isIntersect: true,
       isVertical: true,
       location: { x: 1, y: -2 },
     });
-    const nodes6 = straightNode({
+    const straightBottom = straightNode({
+      isIntersect: true,
+      isVertical: true,
+      location: { x: 1, y: 0 },
+    });
+    const straightLeft = straightNode({
       isIntersect: true,
       isVertical: false,
-      location: { x: 0, y: -3 },
+      location: { x: 0, y: -1 },
     });
-    const nodes2 = curveNode({ angle: 360, location: { x: 0, y: -1 } });
-    const nodes3 = curveNode({ angle: 90, location: { x: 0, y: -1 } });
-    const node4 = TIntersectNode({ angle: 0, location: { x: 1, y: -3 } });
-    node4.top[2].addChild(nodes1[2]);
-    node4.top[3].addChild(nodes1[3]);
-    nodes1[0].endNode.addChild(node4.top[0]);
-    nodes1[1].endNode.addChild(node4.top[1]);
-    node4.bottom[0].addChild(nodes5[0]);
-    node4.bottom[1].addChild(nodes5[1]);
-    nodes5[2].endNode.addChild(node4.bottom[2]);
-    nodes5[3].endNode.addChild(node4.bottom[3]);
-    node4.left[0].addChild(nodes6[0]);
-    node4.left[1].addChild(nodes6[1]);
-    nodes6[2].endNode.addChild(node4.left[2]);
-    nodes6[3].endNode.addChild(node4.left[3]);
-    let points = [...nodes5, ...nodes6, nodes1[0], nodes1[1], ...node4.roots];
+    const straightRight = straightNode({
+      isIntersect: true,
+      isVertical: false,
+      location: { x: 2, y: -1 },
+    });
+    const TIntersect = TIntersectNode({
+      angle: 0,
+      location: { x: 1, y: -1 },
+    });
+    const Intersect = IntersectNode({
+      location: { x: 1, y: -1 },
+    });
+
+    const testStraight = straightNode({
+      isIntersect: false,
+      isVertical: false,
+      location: { x: 1, y: -4 },
+    });
+    const testCurve1 = curveNode({ angle: 270, location: { x: 1, y: -4 } });
+    const testCurve2 = curveNode({ angle: 360, location: { x: 1, y: -4 } });
+
+    const joinNodes = (n1, n2, direction) => {
+      if (direction === "Right") {
+        n2.left[0].addChild(n1.right[0]);
+        n2.left[1].addChild(n1.right[1]);
+        n1.right[2].addChild(n2.left[2]);
+        n1.right[3].addChild(n2.left[3]);
+      } else if (direction === "Left") {
+        n1.left[0].addChild(n2.right[0]);
+        n1.left[1].addChild(n2.right[1]);
+        n2.right[2].addChild(n1.left[2]);
+        n2.right[3].addChild(n1.left[3]);
+      } else if (direction === "Bottom") {
+        n1.bottom[0].addChild(n2.top[0]);
+        n1.bottom[1].addChild(n2.top[1]);
+        n2.top[2].addChild(n1.bottom[2]);
+        n2.top[3].addChild(n1.bottom[3]);
+      } else if (direction === "Top") {
+        n2.bottom[0].addChild(n1.top[0]);
+        n2.bottom[1].addChild(n1.top[1]);
+        n1.top[2].addChild(n2.bottom[2]);
+        n1.top[3].addChild(n2.bottom[3]);
+      }
+    };
+    joinNodes(Intersect, straightRight, "Right");
+    joinNodes(Intersect, straightLeft, "Left");
+    joinNodes(Intersect, straightBottom, "Bottom");
+    joinNodes(Intersect, straightTop, "Top");
+    let points = [
+      ...testStraight.roots,
+      ...testCurve1,
+      ...testCurve2,
+      // ...TIntersect.roots,
+      ...Intersect.roots,
+      ...straightBottom.roots,
+      ...straightRight.roots,
+      ...straightLeft.roots,
+      ...straightTop.roots,
+    ];
     points = points.filter((n) => n.isParent);
     points.forEach((node) => {
       printNodeAndChildren({ color: "Green", node });
