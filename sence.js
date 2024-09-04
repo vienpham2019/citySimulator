@@ -83,12 +83,14 @@ export default class Scene {
       }
       // Recursively print the children nodes
       const { location: nodeLocation } = node;
+
       const point = Geometry.point({
         position: nodeLocation,
         color: colors[color],
       });
       this.scene.add(point);
       node.children.forEach((child) => {
+        if (!child) return;
         const { location: childLocation } = child;
         const { length, angle } = calculateDistanceAndAngle({
           location1: nodeLocation,
@@ -130,70 +132,155 @@ export default class Scene {
     });
     const TIntersect = TIntersectNode({
       angle: 0,
-      location: { x: 1, y: -1 },
+      location: { x: 1, y: -4 },
     });
     const Intersect = IntersectNode({
       location: { x: 1, y: -1 },
     });
 
-    const testStraight = straightNode({
+    const testStraightLeft = straightNode({
       isIntersect: false,
       isVertical: false,
-      location: { x: 1, y: -4 },
+      location: { x: 0, y: -4 },
     });
-    const testCurve1 = curveNode({ angle: 270, location: { x: 1, y: -4 } });
-    const testCurve2 = curveNode({ angle: 360, location: { x: 1, y: -4 } });
+    const testStraightRight = straightNode({
+      isIntersect: false,
+      isVertical: false,
+      location: { x: 2, y: -4 },
+    });
+    const testStraightBottom = straightNode({
+      isIntersect: false,
+      isVertical: true,
+      location: { x: 1, y: -3 },
+    });
+    const testStraightTop = straightNode({
+      isIntersect: false,
+      isVertical: true,
+      location: { x: 1, y: -5 },
+    });
 
     const joinNodes = (n1, n2, direction) => {
-      if (direction === "Right") {
-        n2.left[0].addChild(n1.right[0]);
-        n2.left[1].addChild(n1.right[1]);
-        n1.right[2].addChild(n2.left[2]);
-        n1.right[3].addChild(n2.left[3]);
-      } else if (direction === "Left") {
-        n1.left[0].addChild(n2.right[0]);
-        n1.left[1].addChild(n2.right[1]);
-        n2.right[2].addChild(n1.left[2]);
-        n2.right[3].addChild(n1.left[3]);
-      } else if (direction === "Bottom") {
-        n1.bottom[0].addChild(n2.top[0]);
-        n1.bottom[1].addChild(n2.top[1]);
-        n2.top[2].addChild(n1.bottom[2]);
-        n2.top[3].addChild(n1.bottom[3]);
-      } else if (direction === "Top") {
-        n2.bottom[0].addChild(n1.top[0]);
-        n2.bottom[1].addChild(n1.top[1]);
-        n1.top[2].addChild(n2.bottom[2]);
-        n1.top[3].addChild(n2.bottom[3]);
+      if (direction === "Right" && n2.left && n1.right) {
+        n2.left[0].connectToRootNode(n1.right[0]);
+        n2.left[1].connectToRootNode(n1.right[1]);
+        n1.right[2].connectToEndNode(n2.left[2]);
+        n1.right[3].connectToEndNode(n2.left[3]);
+      } else if (direction === "Left" && n1.left && n2.right) {
+        n1.left[0].connectToRootNode(n2.right[0]);
+        n1.left[1].connectToRootNode(n2.right[1]);
+        n2.right[2].connectToEndNode(n1.left[2]);
+        n2.right[3].connectToEndNode(n1.left[3]);
+      } else if (direction === "Bottom" && n1.bottom && n2.top) {
+        n1.bottom[0].connectToRootNode(n2.top[0]);
+        n1.bottom[1].connectToRootNode(n2.top[1]);
+        n2.top[2].connectToEndNode(n1.bottom[2]);
+        n2.top[3].connectToEndNode(n1.bottom[3]);
+      } else if (direction === "Top" && n2.bottom && n1.top) {
+        n2.bottom[0].connectToRootNode(n1.top[0]);
+        n2.bottom[1].connectToRootNode(n1.top[1]);
+        n1.top[2].connectToEndNode(n2.bottom[2]);
+        n1.top[3].connectToEndNode(n2.bottom[3]);
       }
     };
-    joinNodes(Intersect, straightRight, "Right");
-    joinNodes(Intersect, straightLeft, "Left");
-    joinNodes(Intersect, straightBottom, "Bottom");
-    joinNodes(Intersect, straightTop, "Top");
-    let points = [
-      ...testStraight.roots,
-      ...testCurve1,
-      ...testCurve2,
-      // ...TIntersect.roots,
-      ...Intersect.roots,
-      ...straightBottom.roots,
-      ...straightRight.roots,
-      ...straightLeft.roots,
-      ...straightTop.roots,
-    ];
-    points = points.filter((n) => n.isParent);
-    points.forEach((node) => {
-      printNodeAndChildren({ color: "Green", node });
-    });
-    // points.forEach(({ x, y, length, yRotation }, i) => {
-    //   this.scene.add(
-    //     Geometry.arrow({
-    //       position: { x, y: 0, z: y },
-    //       yRotation,
-    //       length,
-    //     })
-    //   );
+    const roadCordinateNodes = {};
+    const setRCN = (node) => {
+      roadCordinateNodes[`${node.location.x}${node.location.y}`] = node;
+    };
+    setRCN(testStraightRight);
+    setRCN(testStraightLeft);
+    setRCN(testStraightBottom);
+    setRCN(testStraightTop);
+    setRCN(TIntersect);
+    setRCN(straightTop);
+    setRCN(straightBottom);
+    setRCN(straightLeft);
+    setRCN(straightRight);
+    setRCN(Intersect);
+
+    const joinNodesGrid = () => {
+      let roots = [];
+      Object.entries(roadCordinateNodes).map(([, value]) => {
+        const { x, y } = value.location;
+        const top = roadCordinateNodes[`${x}${y - 1}`];
+        const right = roadCordinateNodes[`${x + 1}${y}`];
+        const bottom = roadCordinateNodes[`${x}${y + 1}`];
+        const left = roadCordinateNodes[`${x - 1}${y}`];
+        if (left && !left.isJoinRight && !value.isJoinLeft) {
+          left.isJoinRight = true;
+          value.isJoinLeft = true;
+          joinNodes(value, left, "Left");
+        } else if (right && !right?.isJoinLeft && !value?.isJoinRight) {
+          right.isJoinLeft = true;
+          value.isJoinRight = true;
+          joinNodes(value, right, "Right");
+        } else if (top && !top.isJoinBottom && !value.isJoinTop) {
+          top.isJoinBottom = true;
+          value.isJoinTop = true;
+          joinNodes(value, top, "Top");
+        } else if (bottom && !bottom.isJoinTop && !value.isJoinBottom) {
+          bottom.isJoinTop = true;
+          value.isJoinBottom = true;
+          joinNodes(value, bottom, "Bottom");
+        }
+        roots.push(...value.roots);
+      });
+      return roots.filter((n) => n.isParent);
+    };
+    const points = joinNodesGrid();
+    const path = points[0].getRandomPath();
+    printNodeAndChildren({ color: "Green", node: path });
+    const aStar = (startNode, endNode) => {
+      const openSet = new Set([startNode]);
+      const cameFrom = new Map();
+      const gScore = new Map();
+      const fScore = new Map();
+
+      gScore.set(startNode, 0);
+      fScore.set(startNode, startNode.distanceTo(endNode));
+
+      while (openSet.size > 0) {
+        // Find the node in openSet with the lowest fScore
+        let current = [...openSet].reduce(
+          (min, node) => (fScore.get(node) < fScore.get(min) ? node : min),
+          [...openSet][0]
+        );
+
+        if (current === endNode) {
+          // Reconstruct the path
+          const path = [];
+          while (cameFrom.has(current)) {
+            path.push(current);
+            current = cameFrom.get(current);
+          }
+          path.push(startNode);
+          return path.reverse(); // Return the path from start to end
+        }
+
+        openSet.delete(current);
+
+        for (const neighbor of current.getNeighbors()) {
+          const tentativeGScore =
+            gScore.get(current) + current.distanceTo(neighbor);
+
+          if (!gScore.has(neighbor) || tentativeGScore < gScore.get(neighbor)) {
+            cameFrom.set(neighbor, current);
+            gScore.set(neighbor, tentativeGScore);
+            fScore.set(
+              neighbor,
+              tentativeGScore + neighbor.distanceTo(endNode)
+            );
+
+            if (!openSet.has(neighbor)) {
+              openSet.add(neighbor);
+            }
+          }
+        }
+      }
+
+      return []; // Return an empty path if no path was found
+    };
+    // aStar(points[0], endPoint).forEach((node) => {
+    //   printNodeAndChildren({ color: "Green", node });
     // });
   }
 
@@ -332,7 +419,9 @@ export default class Scene {
 
     if (intersections.length > 0) {
       if (this.hoverObjects.length) {
-        this.hoverObjects.forEach((c) => c.object.material.emissive.setHex(0));
+        this.hoverObjects.forEach((c) =>
+          c?.object?.material?.emissive?.setHex(0)
+        );
       }
       const corner = intersections[0].object;
       // this.hoverObjects = this.getChildrenInGrid(corner.position, Road.base);

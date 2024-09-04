@@ -19,26 +19,26 @@ const curveNode = ({ angle = 90, location, rootNodes = [], endNodes = [] }) => {
   }
   const arrPoints = [
     {
-      a: { x: 0.34, y: 0 },
+      a: { x: 0.32, y: 0 },
       b: { x: 0, y: -0.1 },
       angle,
       deviceTo: 4,
     },
     {
-      a: { x: 0.45, y: 0 },
+      a: { x: 0.44, y: 0 },
       b: { x: 0, y: -0.11 },
       angle,
       deviceTo: 5,
     },
     {
-      a: { x: 0.55, y: 0 },
+      a: { x: 0.54, y: 0 },
       b: { x: 0, y: 0.1 },
       angle,
       deviceTo: 5,
       direction: -1,
     },
     {
-      a: { x: 0.66, y: 0 },
+      a: { x: 0.65, y: 0 },
       b: { x: 0, y: 0.1 },
       angle,
       deviceTo: 5,
@@ -73,7 +73,36 @@ const curveNode = ({ angle = 90, location, rootNodes = [], endNodes = [] }) => {
     result.push(rootNode);
   });
 
-  return result;
+  const [c1, c2, c3, c4] = result;
+  if (angle === 270) {
+    return {
+      location,
+      left: [c4.endNode, c3.endNode, c2, c1],
+      bottom: [c1.endNode, c2.endNode, c3, c4],
+      roots: result,
+    };
+  } else if (angle === 180) {
+    return {
+      location,
+      right: [c4, c3, c2.endNode, c1.endNode],
+      bottom: [c4.endNode, c3.endNode, c2, c1],
+      roots: result,
+    };
+  } else if (angle === 90) {
+    return {
+      location,
+      right: [c1, c2, c3.endNode, c4.endNode],
+      top: [c4, c3, c2.endNode, c1.endNode],
+      roots: result,
+    };
+  } else {
+    return {
+      location,
+      left: [c1.endNode, c2.endNode, c3, c4],
+      top: [c1, c2, c3.endNode, c4.endNode],
+      roots: result,
+    };
+  }
 };
 
 export { curveNode };

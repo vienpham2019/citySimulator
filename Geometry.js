@@ -67,7 +67,6 @@ export default class Geometry {
 
     sphere.position.set(position.x, 0, position.y);
     sphere.name = "Point";
-
     return sphere;
   }
 
@@ -98,4 +97,5 @@ export default class Geometry {
     sphere.name = "Arrow";
     return sphere;
   }
+ 
 }
