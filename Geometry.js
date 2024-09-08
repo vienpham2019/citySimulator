@@ -57,7 +57,12 @@ export default class Geometry {
     return cylinder;
   }
 
-  static point({ position = { x: 0, y: 0 }, radius = 0.02, color = 0xffffff }) {
+  static point({
+    position = { x: 0, y: 0 },
+    radius = 0.02,
+    color = 0xffffff,
+    name = "Point",
+  }) {
     const sphere = Geometry.sphere({
       height: 16,
       width: 32,
@@ -66,7 +71,7 @@ export default class Geometry {
     });
 
     sphere.position.set(position.x, 0, position.y);
-    sphere.name = "Point";
+    sphere.name = name;
     return sphere;
   }
 
@@ -75,6 +80,7 @@ export default class Geometry {
     length = 1,
     yRotation = 0,
     color = 0xffffff,
+    name = "Arrow",
   }) {
     const sphere = Geometry.sphere({
       height: 16,
@@ -94,8 +100,7 @@ export default class Geometry {
 
     sphere.rotation.y = yRotation * (Math.PI / 180);
     sphere.add(cone);
-    sphere.name = "Arrow";
+    sphere.name = name;
     return sphere;
   }
- 
 }

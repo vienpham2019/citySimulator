@@ -39,12 +39,14 @@ export default class Scene {
     // Append renderer to the DOM
     this.roadsMesh = {};
     this.roadGrids = [];
+    this.nodes = [];
     this.setupLights({ width, length });
     this.setUpPlatform({ width, length });
     this.buildingsToGrow = [];
     this.hoverObjects = [];
     this.previewModel = null;
     this.vehicles = [];
+    this.deleteVehicleIds = [];
   }
 
   async init() {
@@ -54,6 +56,47 @@ export default class Scene {
     // });
     // this.scene.add(this.previewModel.mesh);
   }
+
+  printNodeAndChildren = ({ color = "White", node, vehicleId }) => {
+    const colors = {
+      Red: "#FF0000",
+      Green: "#00FF00",
+      White: "#FFFFFF",
+    };
+    if (node.isEndNode()) {
+      color = "Red";
+    }
+    // Recursively print the children nodes
+    const { position: nodeposition } = node;
+
+    const point = Geometry.point({
+      position: nodeposition,
+      color: colors[color],
+      name: vehicleId,
+    });
+    this.scene.add(point);
+    node.children.forEach((child) => {
+      if (!child) return;
+      const { position: childposition } = child;
+      const { length, angle } = calculateDistanceAndAngle({
+        position1: nodeposition,
+        position2: childposition,
+      });
+
+      this.scene.add(
+        Geometry.arrow({
+          position: nodeposition,
+          yRotation: -angle,
+          length,
+          color: colors[color],
+          name: vehicleId,
+        })
+      );
+      this.scene.remove(point);
+      this.printNodeAndChildren({ node: child, vehicleId });
+    });
+    return node;
+  };
 
   async setUpPlatform({ width, length }) {
     for (let x = 0; x < width; x++) {
@@ -67,96 +110,54 @@ export default class Scene {
         this.scene.add(grass.mesh);
       }
     }
-    const vehicle = await Vehicle.create({
-      position: { x: 0, y: 0 },
-    });
 
-    // this.vehicles.push(vehicle);
-    const printNodeAndChildren = ({ color = "White", node }) => {
-      const colors = {
-        Red: "#FF0000",
-        Green: "#00FF00",
-        White: "#FFFFFF",
-      };
-      if (node.isEndNode()) {
-        color = "Red";
-      }
-      // Recursively print the children nodes
-      const { location: nodeLocation } = node;
-
-      const point = Geometry.point({
-        position: nodeLocation,
-        color: colors[color],
-      });
-      this.scene.add(point);
-      node.children.forEach((child) => {
-        if (!child) return;
-        const { location: childLocation } = child;
-        const { length, angle } = calculateDistanceAndAngle({
-          location1: nodeLocation,
-          location2: childLocation,
-        });
-
-        this.scene.add(
-          Geometry.arrow({
-            position: nodeLocation,
-            yRotation: -angle,
-            length,
-            color: colors[color],
-          })
-        );
-        this.scene.remove(point);
-        printNodeAndChildren({ node: child });
-      });
-      return node;
-    };
     const straightTop = straightNode({
       isIntersect: true,
       isVertical: true,
-      location: { x: 1, y: -2 },
+      position: { x: 1, y: -2 },
     });
     const straightBottom = straightNode({
       isIntersect: true,
       isVertical: true,
-      location: { x: 1, y: 0 },
+      position: { x: 1, y: 0 },
     });
     const straightLeft = straightNode({
       isIntersect: true,
       isVertical: false,
-      location: { x: 0, y: -1 },
+      position: { x: 0, y: -1 },
     });
     const straightRight = straightNode({
       isIntersect: true,
       isVertical: false,
-      location: { x: 2, y: -1 },
+      position: { x: 2, y: -1 },
     });
     const TIntersect = TIntersectNode({
       angle: 0,
-      location: { x: 1, y: -4 },
+      position: { x: 1, y: -4 },
     });
     const Intersect = IntersectNode({
-      location: { x: 1, y: -1 },
+      position: { x: 1, y: -1 },
     });
 
     const testStraightLeft = straightNode({
       isIntersect: false,
       isVertical: false,
-      location: { x: 0, y: -4 },
+      position: { x: 0, y: -4 },
     });
     const testStraightRight = straightNode({
       isIntersect: false,
       isVertical: false,
-      location: { x: 2, y: -4 },
+      position: { x: 2, y: -4 },
     });
     const testStraightBottom = straightNode({
       isIntersect: false,
       isVertical: true,
-      location: { x: 1, y: -3 },
+      position: { x: 1, y: -3 },
     });
     const testStraightTop = straightNode({
       isIntersect: false,
       isVertical: true,
-      location: { x: 1, y: -5 },
+      position: { x: 1, y: -5 },
     });
 
     const joinNodes = (n1, n2, direction) => {
@@ -184,7 +185,7 @@ export default class Scene {
     };
     const roadCordinateNodes = {};
     const setRCN = (node) => {
-      roadCordinateNodes[`${node.location.x}${node.location.y}`] = node;
+      roadCordinateNodes[`${node.position.x}${node.position.y}`] = node;
     };
     setRCN(testStraightRight);
     setRCN(testStraightLeft);
@@ -200,7 +201,7 @@ export default class Scene {
     const joinNodesGrid = () => {
       let roots = [];
       Object.entries(roadCordinateNodes).map(([, value]) => {
-        const { x, y } = value.location;
+        const { x, y } = value.position;
         const top = roadCordinateNodes[`${x}${y - 1}`];
         const right = roadCordinateNodes[`${x + 1}${y}`];
         const bottom = roadCordinateNodes[`${x}${y + 1}`];
@@ -226,62 +227,8 @@ export default class Scene {
       });
       return roots.filter((n) => n.isParent);
     };
-    const points = joinNodesGrid();
-    const path = points[0].getRandomPath();
-    printNodeAndChildren({ color: "Green", node: path });
-    const aStar = (startNode, endNode) => {
-      const openSet = new Set([startNode]);
-      const cameFrom = new Map();
-      const gScore = new Map();
-      const fScore = new Map();
-
-      gScore.set(startNode, 0);
-      fScore.set(startNode, startNode.distanceTo(endNode));
-
-      while (openSet.size > 0) {
-        // Find the node in openSet with the lowest fScore
-        let current = [...openSet].reduce(
-          (min, node) => (fScore.get(node) < fScore.get(min) ? node : min),
-          [...openSet][0]
-        );
-
-        if (current === endNode) {
-          // Reconstruct the path
-          const path = [];
-          while (cameFrom.has(current)) {
-            path.push(current);
-            current = cameFrom.get(current);
-          }
-          path.push(startNode);
-          return path.reverse(); // Return the path from start to end
-        }
-
-        openSet.delete(current);
-
-        for (const neighbor of current.getNeighbors()) {
-          const tentativeGScore =
-            gScore.get(current) + current.distanceTo(neighbor);
-
-          if (!gScore.has(neighbor) || tentativeGScore < gScore.get(neighbor)) {
-            cameFrom.set(neighbor, current);
-            gScore.set(neighbor, tentativeGScore);
-            fScore.set(
-              neighbor,
-              tentativeGScore + neighbor.distanceTo(endNode)
-            );
-
-            if (!openSet.has(neighbor)) {
-              openSet.add(neighbor);
-            }
-          }
-        }
-      }
-
-      return []; // Return an empty path if no path was found
-    };
-    // aStar(points[0], endPoint).forEach((node) => {
-    //   printNodeAndChildren({ color: "Green", node });
-    // });
+    this.nodes = joinNodesGrid();
+    this.addVehicle();
   }
 
   setupLights({ width, length }) {
@@ -305,8 +252,37 @@ export default class Scene {
     this.selectRoad = "Main";
   }
 
+  addVehicle = async () => {
+    if (this.nodes.length === 0) return;
+    const index = Math.floor(Math.random() * this.nodes.length);
+    const path = this.nodes[index].getRandomPath();
+    const vehicle = await Vehicle.create({
+      node: path,
+    });
+    this.printNodeAndChildren({
+      color: "Green",
+      node: path,
+      vehicleId: vehicle.id,
+    });
+    this.scene.add(vehicle.mesh);
+    this.vehicles.push(vehicle);
+  };
+
   draw = () => {
-    this.vehicles.forEach((vc) => vc.move());
+    if (this.deleteVehicleIds.length > 0) {
+      this.deleteMeshesByName(this.deleteVehicleIds);
+    }
+
+    this.vehicles.forEach((vc) => {
+      if (vc.isArrived) {
+        this.deleteMesh(vc.mesh);
+        this.deleteVehicleIds.push(vc.id);
+        this.vehicles = this.vehicles.filter((v) => v.id !== vc.id);
+        this.addVehicle();
+      } else {
+        vc.move();
+      }
+    });
     this.renderer.render(this.scene, this.camera);
   };
 
@@ -382,6 +358,21 @@ export default class Scene {
       }
     });
     return foundMesh;
+  }
+
+  deleteMeshesByName(names) {
+    // Loop through all children in the scene
+    let isDelete = false;
+    this.scene.children.forEach((child) => {
+      // Check if the child is a mesh and its name matches one of the names to delete
+      if (child.isMesh && names.includes(child.name)) {
+        isDelete = true;
+        this.deleteMesh(child);
+      }
+    });
+    if (!isDelete) {
+      this.deleteVehicleIds.filter((id) => !names.includes(id));
+    }
   }
 
   deleteMesh(mesh) {

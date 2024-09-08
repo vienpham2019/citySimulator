@@ -1,6 +1,6 @@
 class Node {
-  constructor({ location }) {
-    this.location = location;
+  constructor({ position }) {
+    this.position = position;
     this.children = []; // Consider renaming to `children` for clarity
     this.connectRootNode = null;
     this.endNode = null;
@@ -45,7 +45,7 @@ class Node {
 
   // Collect all descendants recursively
   getRandomPath() {
-    const root = new Node({ location: this.location });
+    const root = new Node({ position: this.position });
     let rootCurrent = root;
     let current = this;
     while (!current.isEndNode()) {
@@ -53,8 +53,8 @@ class Node {
         const randomIndex = Math.floor(Math.random() * current.children.length);
         const child = current.children[randomIndex];
 
-        // Create a new node for the path with the child's location
-        const newNode = new Node({ location: child.location });
+        // Create a new node for the path with the child's position
+        const newNode = new Node({ position: child.position });
         rootCurrent.addChild(newNode);
 
         // Move forward in the path
@@ -69,8 +69,8 @@ class Node {
   }
 
   distanceTo(node) {
-    const dx = this.location.x - node.location.x;
-    const dy = this.location.y - node.location.y;
+    const dx = this.position.x - node.position.x;
+    const dy = this.position.y - node.position.y;
     return Math.sqrt(dx * dx + dy * dy);
   }
 

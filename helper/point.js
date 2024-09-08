@@ -22,34 +22,19 @@ const getPoints = ({
   return result;
 };
 
-const calculateDistancesAndAngles = (points) => {
-  const lengthsAndAngles = [];
+const calculateSpeedComponents = (speed, angle) => {
+  // Convert angle to radians
+  const angleInRadians = angle * (Math.PI / 180);
 
-  for (let i = 0; i < points.length - 1; i++) {
-    const { x: x1, y: y1 } = points[i];
-    const { x: x2, y: y2 } = points[i + 1];
-
-    // Calculate distance between points
-    const length = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
-
-    // Calculate angle between points
-    const angleRadians = Math.atan2(y2 - y1, x2 - x1);
-    const angleDegrees = angleRadians * (180 / Math.PI);
-
-    lengthsAndAngles.push({
-      x: x1,
-      y: y1,
-      length: parseFloat(length.toFixed(2)),
-      angle: parseFloat(angleDegrees.toFixed(2)),
-    });
-  }
-
-  return lengthsAndAngles;
+  // Calculate speed components
+  const speedX = speed * Math.cos(angleInRadians);
+  const speedY = speed * Math.sin(angleInRadians);
+  return { speedX, speedY };
 };
 
-const calculateDistanceAndAngle = ({ location1, location2 }) => {
-  const { x: x1, y: y1 } = location1;
-  const { x: x2, y: y2 } = location2;
+const calculateDistanceAndAngle = ({ position1, position2 }) => {
+  const { x: x1, y: y1 } = position1;
+  const { x: x2, y: y2 } = position2;
 
   // Calculate distance between points
   const length = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
@@ -58,9 +43,18 @@ const calculateDistanceAndAngle = ({ location1, location2 }) => {
   const angleRadians = Math.atan2(y2 - y1, x2 - x1);
   const angleDegrees = angleRadians * (180 / Math.PI);
   return {
-    length: parseFloat(length.toFixed(2)),
-    angle: parseFloat(angleDegrees.toFixed(2)),
+    length: length.toFixed(2),
+    angle: angleDegrees.toFixed(2),
   };
 };
 
-export { getPoints, calculateDistanceAndAngle };
+const calculateHypotenuse = (a, b) => {
+  return Math.sqrt(a * a + b * b);
+};
+
+export {
+  getPoints,
+  calculateDistanceAndAngle,
+  calculateSpeedComponents,
+  calculateHypotenuse,
+};

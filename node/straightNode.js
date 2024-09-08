@@ -1,8 +1,8 @@
 import { Node } from "./node.js";
 
-const straightNode = ({ isVertical = false, isIntersect = true, location }) => {
+const straightNode = ({ isVertical = false, isIntersect = true, position }) => {
   let result = [];
-  const { x, y } = location;
+  const { x, y } = position;
   if (isVertical) {
     result = [
       {
@@ -90,11 +90,11 @@ const straightNode = ({ isVertical = false, isIntersect = true, location }) => {
   }
 
   result = result.map(({ root, childs: rootChilds }) => {
-    const rootNode = new Node({ location: { x: root.x, y: root.y } });
+    const rootNode = new Node({ position: { x: root.x, y: root.y } });
     rootChilds.forEach((childs) => {
       let currentNode = null;
       childs.forEach(({ x, y }) => {
-        const newNode = new Node({ location: { x, y } });
+        const newNode = new Node({ position: { x, y } });
         if (currentNode === null) {
           rootNode.addChild(newNode);
           currentNode = newNode;
@@ -117,14 +117,14 @@ const straightNode = ({ isVertical = false, isIntersect = true, location }) => {
   const [s1, s2, s3, s4] = result;
   if (isVertical) {
     return {
-      location,
+      position,
       top: [s1, s2, s3.endNode, s4.endNode],
       bottom: [s1.endNode, s2.endNode, s3, s4],
       roots: result,
     };
   } else {
     return {
-      location,
+      position,
       right: [s1, s2, s3.endNode, s4.endNode],
       left: [s1.endNode, s2.endNode, s3, s4],
       roots: result,
