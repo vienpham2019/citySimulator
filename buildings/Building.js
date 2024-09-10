@@ -26,7 +26,7 @@ export default class Building {
 
   setRotate({ x, y, z }) {
     if (x) this.mesh.rotation.x = THREE.MathUtils.degToRad(x);
-    if (y) this.mesh.rotation.y = THREE.MathUtils.degToRad(y);
+    if (y) this.mesh.rotation.y = parseFloat(THREE.MathUtils.degToRad(y)).toFixed(2);
     if (z) this.mesh.rotation.z = THREE.MathUtils.degToRad(z);
   }
 

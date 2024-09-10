@@ -15,26 +15,27 @@ export default class Geometry {
 
   static sphere({
     height = 1,
-    color = 0xffffff,
+    color = 0xd3d3d3,
     width = 1,
     radius = 1,
     wireframe = false,
   }) {
     const geometry = new THREE.SphereGeometry(radius, width, height);
-    const material = new THREE.MeshLambertMaterial({ color, wireframe });
+    const material = new THREE.MeshBasicMaterial({ color, wireframe });
     return new THREE.Mesh(geometry, material);
   }
 
   static cone({
-    radialSegments = 1,
-    color = 0xffffff,
+    radialSegments = 10,
+    color = 0xd3d3d3,
     height = 1,
-    radius = 1,
+    radius = 0.02,
     wireframe = false,
   }) {
     const geometry = new THREE.ConeGeometry(radius, height, radialSegments);
     const material = new THREE.MeshLambertMaterial({ color, wireframe });
-    return new THREE.Mesh(geometry, material);
+    const mesh = new THREE.Mesh(geometry, material);
+    return mesh;
   }
 
   static cylinder({
@@ -42,7 +43,7 @@ export default class Geometry {
     radiusTop = 0.02,
     radiusBottom = 0.02,
     radialSegments = 10,
-    color = 0xffffff,
+    color = 0xd3d3d3,
   }) {
     const geometry = new THREE.CylinderGeometry(
       radiusTop,
@@ -50,7 +51,7 @@ export default class Geometry {
       height,
       radialSegments
     );
-    const material = new THREE.MeshBasicMaterial({ color });
+    const material = new THREE.MeshLambertMaterial({ color });
 
     const cylinder = new THREE.Mesh(geometry, material);
 
@@ -60,7 +61,7 @@ export default class Geometry {
   static point({
     position = { x: 0, y: 0 },
     radius = 0.02,
-    color = 0xffffff,
+    color = 0xd3d3d3,
     name = "Point",
   }) {
     const sphere = Geometry.sphere({
@@ -79,7 +80,7 @@ export default class Geometry {
     position = { x: 0, z: 0 },
     length = 1,
     yRotation = 0,
-    color = 0xffffff,
+    color = 0xd3d3d3,
     name = "Arrow",
   }) {
     const sphere = Geometry.sphere({
@@ -93,7 +94,7 @@ export default class Geometry {
       height: length - 0.01,
       radialSegments: 10,
       radius: 0.02,
-      color: 0xffffff,
+      color: 0xd3d3d3,
     });
     cone.position.set(length / 2 + 0.01, 0, 0);
     cone.rotation.z = -Math.PI / 2;

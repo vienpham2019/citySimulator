@@ -1,7 +1,18 @@
 import { OrbitControls } from "jsm/controls/OrbitControls.js";
 import Scene from "./sence.js";
-import IndustryFactory from "./buildings/IndustryFactory.js";
-
+(function () {
+  var script = document.createElement("script");
+  script.onload = function () {
+    var stats = new Stats();
+    document.body.appendChild(stats.dom);
+    requestAnimationFrame(function loop() {
+      stats.update();
+      requestAnimationFrame(loop);
+    });
+  };
+  script.src = "https://mrdoob.github.io/stats.js/build/stats.min.js";
+  document.head.appendChild(script);
+})();
 const width = 20;
 const length = 20;
 const myScene = new Scene({ width, length });
@@ -16,7 +27,7 @@ document.body.addEventListener(
   "mousedown",
   (event) => {
     // Left mouse
-    if (event.button === 0) myScene.onSelectObject(event);
+    // if (event.button === 0) myScene.onSelectObject(event);
   },
   false
 );
@@ -24,7 +35,7 @@ document.body.addEventListener(
 document.body.addEventListener(
   "mousemove",
   (event) => {
-    myScene.onHoverObject(event);
+    // myScene.onHoverObject(event);
   },
   false
 );

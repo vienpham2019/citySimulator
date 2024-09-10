@@ -22,15 +22,15 @@ const getPoints = ({
   return result;
 };
 
-const calculateSpeedComponents = (speed, angle) => {
-  // Convert angle to radians
-  const angleInRadians = angle * (Math.PI / 180);
+// const calculateSpeedComponents = (speed, angle) => {
+//   // Convert angle to radians
+//   const angleInRadians = angle * (Math.PI / 180);
 
-  // Calculate speed components
-  const speedX = speed * Math.cos(angleInRadians);
-  const speedY = speed * Math.sin(angleInRadians);
-  return { speedX, speedY };
-};
+//   // Calculate speed components
+//   const speedX = speed * Math.cos(angleInRadians);
+//   const speedY = speed * Math.sin(angleInRadians);
+//   return { speedX, speedY };
+// };
 
 const calculateDistanceAndAngle = ({ position1, position2 }) => {
   const { x: x1, y: y1 } = position1;
@@ -46,6 +46,30 @@ const calculateDistanceAndAngle = ({ position1, position2 }) => {
     length: length.toFixed(2),
     angle: angleDegrees.toFixed(2),
   };
+};
+
+const calculateSpeedComponents = (currentPosition, targetPosition, speed) => {
+  // Extract positions
+  const { x: x1, z: y1 } = currentPosition;
+  const { x: x2, y: y2 } = targetPosition;
+
+  // Calculate the difference in position
+  const deltaX = x2 - x1;
+  const deltaY = y2 - y1;
+
+  // Calculate distance between current and target positions
+  const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+
+  // Avoid division by zero in case currentPosition and targetPosition are the same
+  if (distance === 0) {
+    return { speedX: 0, speedY: 0 };
+  }
+
+  // Calculate the speed components
+  const speedX = (deltaX / distance) * speed;
+  const speedY = (deltaY / distance) * speed;
+
+  return { speedX, speedY };
 };
 
 const calculateHypotenuse = (a, b) => {

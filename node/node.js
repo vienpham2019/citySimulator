@@ -7,6 +7,10 @@ class Node {
     this.isParent = true;
   }
 
+  isRootNode() {
+    return this.isParent;
+  }
+
   resetNode() {
     this.children = [];
     this.endNode = null;
@@ -45,33 +49,82 @@ class Node {
 
   // Collect all descendants recursively
   getRandomPath() {
-    const root = new Node({ position: this.position });
-    let rootCurrent = root;
-    let current = this;
-    while (!current.isEndNode()) {
-      if (current.children.length > 0) {
-        const randomIndex = Math.floor(Math.random() * current.children.length);
-        const child = current.children[randomIndex];
-
-        // Create a new node for the path with the child's position
-        const newNode = new Node({ position: child.position });
-        rootCurrent.addChild(newNode);
-
-        // Move forward in the path
-        rootCurrent = newNode;
-        current = child;
+    let endNode = this;
+    while (!endNode.isEndNode() && Math.random() < 0.9) {
+      if (endNode.children.length > 0) {
+        const randomIndex = Math.floor(Math.random() * endNode.children.length);
+        const child = endNode.children[randomIndex];
+        endNode = child;
       } else {
         break; // No children to traverse
       }
     }
-    root.endNode = rootCurrent;
-    return root;
+    const path = this.findPath(endNode).map(
+      ({ position: { x, y } }) => `${x},${y}`
+    );
+    path.push(`${endNode.position.x},${endNode.position.y}`);
+    return path;
   }
 
-  distanceTo(node) {
-    const dx = this.position.x - node.position.x;
-    const dy = this.position.y - node.position.y;
+  findPath(endNode) {
+    const openSet = new Set([this]); // Nodes to explore
+    const cameFrom = new Map(); // To reconstruct the path
+
+    const gScore = new Map(); // Cost from start to this node
+    gScore.set(this, 0);
+
+    const fScore = new Map(); // Estimated cost from start to end
+    fScore.set(this, this.heuristic(this, endNode));
+
+    while (openSet.size > 0) {
+      // Get the node with the lowest fScore
+      let current = [...openSet].reduce((a, b) =>
+        fScore.get(a) < fScore.get(b) ? a : b
+      );
+
+      // If we reached the end node, reconstruct the path
+      if (current === endNode) {
+        return this.reconstructPath(cameFrom, current);
+      }
+
+      openSet.delete(current);
+
+      for (let neighbor of current.children) {
+        const tentativeGScore =
+          gScore.get(current) + this.heuristic(current, neighbor);
+
+        if (!gScore.has(neighbor) || tentativeGScore < gScore.get(neighbor)) {
+          // Update the best path to the neighbor
+          cameFrom.set(neighbor, current);
+          gScore.set(neighbor, tentativeGScore);
+          fScore.set(
+            neighbor,
+            tentativeGScore + this.heuristic(neighbor, endNode)
+          );
+
+          if (!openSet.has(neighbor)) {
+            openSet.add(neighbor);
+          }
+        }
+      }
+    }
+
+    return null; // No path found
+  }
+
+  heuristic(node, endNode) {
+    const dx = node.position.x - endNode.position.x;
+    const dy = node.position.y - endNode.position.y;
     return Math.sqrt(dx * dx + dy * dy);
+  }
+
+  reconstructPath(cameFrom, current) {
+    const totalPath = [current];
+    while (cameFrom.has(current)) {
+      current = cameFrom.get(current);
+      totalPath.push(current);
+    }
+    return totalPath.reverse(); // Reverse to get the correct order
   }
 
   // Returns all adjacent nodes (children)

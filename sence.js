@@ -24,6 +24,7 @@ export default class Scene {
     this.s_width = width;
     this.s_length = length;
     this.scene = new THREE.Scene();
+
     this.camera = new THREE.PerspectiveCamera(75, w / h, 0.1, 1000);
     this.camera.position.z = width;
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -47,6 +48,7 @@ export default class Scene {
     this.previewModel = null;
     this.vehicles = [];
     this.deleteVehicleIds = [];
+    this.pointInstancedMesh = null;
   }
 
   async init() {
@@ -57,43 +59,113 @@ export default class Scene {
     // this.scene.add(this.previewModel.mesh);
   }
 
-  printNodeAndChildren = ({ color = "White", node, vehicleId }) => {
+  printNodeAndChildren = ({
+    color = "White",
+    node,
+    vehicleId,
+    processedNodes,
+  }) => {
     const colors = {
       Red: "#FF0000",
       Green: "#00FF00",
       White: "#FFFFFF",
     };
-    if (node.isEndNode()) {
-      color = "Red";
-    }
-    // Recursively print the children nodes
     const { position: nodeposition } = node;
+    if (!node) {
+      return; // Skip processing if node is already processed
+    }
+    if (
+      node.isEndNode() &&
+      !processedNodes.has(`End:${nodeposition.x},${nodeposition.y}`)
+    ) {
+      const pointMatrix = new THREE.Matrix4();
+      // Example position for an instance
+      const position = new THREE.Vector3(nodeposition.x, 0, nodeposition.y);
+      pointMatrix.setPosition(position);
+      // Set the matrix at a specific index to make that instance visible
+      this.endPointInstancedMesh.setMatrixAt(this.endPointIndex++, pointMatrix);
 
-    const point = Geometry.point({
-      position: nodeposition,
-      color: colors[color],
-      name: vehicleId,
-    });
-    this.scene.add(point);
+      processedNodes.add(`End:${nodeposition.x},${nodeposition.y}`);
+    }
+    if (
+      node.isRootNode() &&
+      !processedNodes.has(`Root:${nodeposition.x},${nodeposition.y}`)
+    ) {
+      const rootPointMatrix = new THREE.Matrix4();
+      // Example position for an instance
+      const position = new THREE.Vector3(nodeposition.x, 0, nodeposition.y);
+      rootPointMatrix.setPosition(position);
+      // Set the matrix at a specific index to make that instance visible
+      this.startPointInstancedMesh.setMatrixAt(
+        this.startPointIndex++,
+        rootPointMatrix
+      );
+      processedNodes.add(`Root:${nodeposition.x},${nodeposition.y}`);
+    }
+
     node.children.forEach((child) => {
-      if (!child) return;
       const { position: childposition } = child;
+      if (
+        processedNodes.has(
+          `${nodeposition.x}->${childposition.x},${nodeposition.y}->${childposition.y}`
+        )
+      ) {
+        return;
+      }
       const { length, angle } = calculateDistanceAndAngle({
         position1: nodeposition,
         position2: childposition,
       });
+      // Point
+      // // Example position for an instance
+      const position = new THREE.Vector3(childposition.x, 0, childposition.y);
+      if (!child.isEndNode()) {
+        const pointMatrix = new THREE.Matrix4();
+        pointMatrix.setPosition(position);
+        // Set the matrix at a specific index to make that instance visible
+        this.pointInstancedMesh.setMatrixAt(this.pointIndex++, pointMatrix);
+      }
+      // Arrow
+      const arrowMatrix = new THREE.Matrix4();
+      // Convert angles to radians
+      const yRotationAngle = THREE.MathUtils.degToRad(-angle);
+      const zRotationAngle = THREE.MathUtils.degToRad(-90);
 
-      this.scene.add(
-        Geometry.arrow({
-          position: nodeposition,
-          yRotation: -angle,
-          length,
-          color: colors[color],
-          name: vehicleId,
-        })
+      // Create quaternions for each rotation
+      const yRotation = new THREE.Quaternion();
+      const zRotation = new THREE.Quaternion();
+
+      // Set rotations
+      yRotation.setFromAxisAngle(new THREE.Vector3(0, 1, 0), yRotationAngle); // Y-axis rotation
+      zRotation.setFromAxisAngle(new THREE.Vector3(0, 0, 1), zRotationAngle); // Z-axis rotation
+
+      // Combine rotations (note: order matters: first apply Y, then Z)
+      const combinedRotation = new THREE.Quaternion();
+      combinedRotation.multiplyQuaternions(yRotation, zRotation);
+
+      // Set the scale (length adjustment)
+      const lengthScale = new THREE.Vector3(1, length - 0.01, 1); // Adjust X-axis to change length
+
+      // Compose the transformation matrix
+      arrowMatrix.compose(position, combinedRotation, lengthScale);
+      // Apply additional translation (move up by 1 unit)
+      const additionalTranslation = new THREE.Matrix4().makeTranslation(
+        0,
+        -0.5,
+        0
       );
-      this.scene.remove(point);
-      this.printNodeAndChildren({ node: child, vehicleId });
+      arrowMatrix.multiply(additionalTranslation);
+      // Apply the transformation to the instanced mesh
+      this.arrowInstancedMesh.setMatrixAt(this.arrowIndex++, arrowMatrix);
+
+      processedNodes.add(
+        `${nodeposition.x}->${childposition.x},${nodeposition.y}->${childposition.y}`
+      );
+      this.printNodeAndChildren({
+        node: child,
+        vehicleId,
+        processedNodes,
+      });
     });
     return node;
   };
@@ -121,41 +193,69 @@ export default class Scene {
       isVertical: true,
       position: { x: 1, y: 0 },
     });
-    const straightLeft = straightNode({
+
+    const straightLeft1 = straightNode({
       isIntersect: true,
       isVertical: false,
       position: { x: 0, y: -1 },
+    });
+    const straightLeft2 = straightNode({
+      isIntersect: true,
+      isVertical: false,
+      position: { x: -1, y: -1 },
+    });
+    const TIntersect1 = TIntersectNode({
+      angle: 180,
+      position: { x: -2, y: -1 },
     });
     const straightRight = straightNode({
       isIntersect: true,
       isVertical: false,
       position: { x: 2, y: -1 },
     });
-    const TIntersect = TIntersectNode({
-      angle: 0,
+    const Intersect1 = IntersectNode({
       position: { x: 1, y: -4 },
     });
-    const Intersect = IntersectNode({
+    const Intersect2 = IntersectNode({
       position: { x: 1, y: -1 },
+    });
+    const TIntersect2 = TIntersectNode({
+      angle: 180,
+      position: { x: -2, y: -4 },
     });
 
     const testStraightLeft = straightNode({
-      isIntersect: false,
+      isIntersect: true,
       isVertical: false,
       position: { x: 0, y: -4 },
     });
+    const testStraightLeft2 = straightNode({
+      isIntersect: true,
+      isVertical: false,
+      position: { x: -1, y: -4 },
+    });
     const testStraightRight = straightNode({
-      isIntersect: false,
+      isIntersect: true,
       isVertical: false,
       position: { x: 2, y: -4 },
     });
     const testStraightBottom = straightNode({
-      isIntersect: false,
+      isIntersect: true,
       isVertical: true,
       position: { x: 1, y: -3 },
     });
+    const testStraightBottom2 = straightNode({
+      isIntersect: true,
+      isVertical: true,
+      position: { x: -2, y: -3 },
+    });
+    const testStraightBottom3 = straightNode({
+      isIntersect: true,
+      isVertical: true,
+      position: { x: -2, y: -2 },
+    });
     const testStraightTop = straightNode({
-      isIntersect: false,
+      isIntersect: true,
       isVertical: true,
       position: { x: 1, y: -5 },
     });
@@ -189,17 +289,23 @@ export default class Scene {
     };
     setRCN(testStraightRight);
     setRCN(testStraightLeft);
+    setRCN(testStraightLeft2);
     setRCN(testStraightBottom);
+    setRCN(testStraightBottom2);
+    setRCN(testStraightBottom3);
     setRCN(testStraightTop);
-    setRCN(TIntersect);
+    setRCN(Intersect1);
+    setRCN(TIntersect1);
+    setRCN(TIntersect2);
     setRCN(straightTop);
     setRCN(straightBottom);
-    setRCN(straightLeft);
+    setRCN(straightLeft1);
+    setRCN(straightLeft2);
     setRCN(straightRight);
-    setRCN(Intersect);
+    setRCN(Intersect2);
 
     const joinNodesGrid = () => {
-      let roots = [];
+      const roots = new Set();
       Object.entries(roadCordinateNodes).map(([, value]) => {
         const { x, y } = value.position;
         const top = roadCordinateNodes[`${x}${y - 1}`];
@@ -210,25 +316,134 @@ export default class Scene {
           left.isJoinRight = true;
           value.isJoinLeft = true;
           joinNodes(value, left, "Left");
-        } else if (right && !right?.isJoinLeft && !value?.isJoinRight) {
+        }
+        if (right && !right.isJoinLeft && !value.isJoinRight) {
           right.isJoinLeft = true;
           value.isJoinRight = true;
           joinNodes(value, right, "Right");
-        } else if (top && !top.isJoinBottom && !value.isJoinTop) {
+        }
+        if (top && !top.isJoinBottom && !value.isJoinTop) {
           top.isJoinBottom = true;
           value.isJoinTop = true;
           joinNodes(value, top, "Top");
-        } else if (bottom && !bottom.isJoinTop && !value.isJoinBottom) {
+        }
+        if (bottom && !bottom.isJoinTop && !value.isJoinBottom) {
           bottom.isJoinTop = true;
           value.isJoinBottom = true;
           joinNodes(value, bottom, "Bottom");
         }
-        roots.push(...value.roots);
+        value.roots.forEach((root) => roots.add(root));
       });
-      return roots.filter((n) => n.isParent);
+      return Array.from(roots).filter((n) => n.isParent);
     };
     this.nodes = joinNodesGrid();
-    this.addVehicle();
+
+    // Create the geometry and material for the points
+    const arrow = Geometry.cone({
+      position: { x: 0, y: 0, z: 0 },
+      color: 0xffffff,
+    });
+
+    // Create the InstancedMesh with a capacity of 1000 instances
+    this.arrowInstancedMesh = new THREE.InstancedMesh(
+      arrow.geometry,
+      arrow.material,
+      1000 // Maximum number of instances
+    );
+
+    // Create the geometry and material for the points
+    const point = Geometry.point({
+      position: { x: 0, y: 0, z: 0 },
+      color: 0xffffff,
+    });
+
+    // Create the InstancedMesh with a capacity of 1000 instances
+    this.pointInstancedMesh = new THREE.InstancedMesh(
+      point.geometry,
+      point.material,
+      1000 // Maximum number of instances
+    );
+
+    // Create the geometry and material for the points
+    const endPoint = Geometry.point({
+      position: { x: 0, y: 0, z: 0 },
+      color: 0xff0000,
+    });
+
+    // Create the InstancedMesh with a capacity of 1000 instances
+    this.endPointInstancedMesh = new THREE.InstancedMesh(
+      endPoint.geometry,
+      endPoint.material,
+      100 // Maximum number of instances
+    );
+
+    // Create the geometry and material for the points
+    const startPoint = Geometry.point({
+      position: { x: 0, y: 0, z: 0 },
+      color: 0x00ff00,
+    });
+
+    // Create the InstancedMesh with a capacity of 1000 instances
+    this.startPointInstancedMesh = new THREE.InstancedMesh(
+      startPoint.geometry,
+      startPoint.material,
+      1000 // Maximum number of instances
+    );
+
+    // Ensure no instances are visible initially
+    const matrix = new THREE.Matrix4();
+    matrix.setPosition(new THREE.Vector3(1e10, 1e10, 1e10)); // Move out of view
+
+    // Initialize all instances to be out of view or with zero scale
+    for (let i = 0; i < this.pointInstancedMesh.count; i++) {
+      this.pointInstancedMesh.setMatrixAt(i, matrix);
+    }
+
+    for (let i = 0; i < this.endPointInstancedMesh.count; i++) {
+      this.endPointInstancedMesh.setMatrixAt(i, matrix);
+    }
+
+    for (let i = 0; i < this.startPointInstancedMesh.count; i++) {
+      this.startPointInstancedMesh.setMatrixAt(i, matrix);
+    }
+
+    // Initialize all instances to be out of view or with zero scale
+    for (let i = 0; i < this.arrowInstancedMesh.count; i++) {
+      this.arrowInstancedMesh.setMatrixAt(i, matrix);
+    }
+
+    // Mark the instanceMatrix as needing an update
+    this.pointInstancedMesh.instanceMatrix.needsUpdate = true;
+    this.endPointInstancedMesh.instanceMatrix.needsUpdate = true;
+    this.startPointInstancedMesh.instanceMatrix.needsUpdate = true;
+    this.arrowInstancedMesh.instanceMatrix.needsUpdate = true;
+
+    // Add the InstancedMesh to the scene
+    this.pointIndex = 0;
+    this.scene.add(this.pointInstancedMesh);
+
+    this.arrowIndex = 0;
+    this.scene.add(this.arrowInstancedMesh);
+
+    this.endPointIndex = 0;
+    this.scene.add(this.endPointInstancedMesh);
+
+    this.startPointIndex = 0;
+    this.scene.add(this.startPointInstancedMesh);
+
+    const processedNodes = new Set();
+    this.nodes.forEach((n) => {
+      this.printNodeAndChildren({
+        color: "Green",
+        node: n,
+        vehicleId: "vehicle.id",
+        processedNodes,
+      });
+    });
+
+    // Array.from({ length: 10 }).forEach(() => {
+    //   this.addVehicle();
+    // });
   }
 
   setupLights({ width, length }) {
@@ -257,31 +472,28 @@ export default class Scene {
     const index = Math.floor(Math.random() * this.nodes.length);
     const path = this.nodes[index].getRandomPath();
     const vehicle = await Vehicle.create({
-      node: path,
+      path,
     });
-    this.printNodeAndChildren({
-      color: "Green",
-      node: path,
-      vehicleId: vehicle.id,
-    });
+    // this.printNodeAndChildren({
+    //   color: "Green",
+    //   node: path,
+    //   vehicleId: vehicle.id,
+    // });
     this.scene.add(vehicle.mesh);
     this.vehicles.push(vehicle);
   };
 
   draw = () => {
-    if (this.deleteVehicleIds.length > 0) {
-      this.deleteMeshesByName(this.deleteVehicleIds);
-    }
+    // if (this.deleteVehicleIds.length > 0) {
+    //   this.deleteMeshesByName(this.deleteVehicleIds);
+    // }
 
     this.vehicles.forEach((vc) => {
       if (vc.isArrived) {
-        this.deleteMesh(vc.mesh);
-        this.deleteVehicleIds.push(vc.id);
-        this.vehicles = this.vehicles.filter((v) => v.id !== vc.id);
-        this.addVehicle();
-      } else {
-        vc.move();
-      }
+        const index = Math.floor(Math.random() * this.nodes.length);
+        const path = this.nodes[index].getRandomPath();
+        vc.resetPosition(path);
+      } else vc.move();
     });
     this.renderer.render(this.scene, this.camera);
   };
