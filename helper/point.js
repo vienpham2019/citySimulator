@@ -44,7 +44,7 @@ const calculateDistanceAndAngle = ({ position1, position2 }) => {
   const angleDegrees = angleRadians * (180 / Math.PI);
   return {
     length: length.toFixed(2),
-    angle: angleDegrees.toFixed(2),
+    angleDeg: angleDegrees.toFixed(2),
   };
 };
 
@@ -76,9 +76,22 @@ const calculateHypotenuse = (a, b) => {
   return Math.sqrt(a * a + b * b);
 };
 
+const rotateVector = ({ vector, angleRadians }) => {
+  // Calculate the cosine and sine of the angle
+  const cosAngle = Math.cos(angleRadians);
+  const sinAngle = Math.sin(angleRadians);
+
+  // Rotate the vector
+  const x = vector.x * cosAngle - vector.y * sinAngle;
+  const y = vector.x * sinAngle + vector.y * cosAngle;
+
+  return { x, y };
+};
+
 export {
   getPoints,
   calculateDistanceAndAngle,
   calculateSpeedComponents,
   calculateHypotenuse,
+  rotateVector,
 };

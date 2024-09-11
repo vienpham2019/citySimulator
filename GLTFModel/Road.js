@@ -1,6 +1,6 @@
-import Building from "./Building.js";
+import GLTF from "./GLTF.js";
 
-export default class Road extends Building {
+export default class Road extends GLTF {
   static base = { x: 1, z: 1 };
   static offset = { x: 0, y: 0 };
 

@@ -1,20 +1,29 @@
 import * as THREE from "three";
 
-import Grass from "./Grass.js";
-import IndustryFactory from "./buildings/IndustryFactory.js";
+import Grass from "./GLTFModel/Grass.js";
+import IndustryFactory from "./GLTFModel/IndustryFactory.js";
 import {
   converMeshRotationToDegrees,
   handleAddRoadToGrid,
   printGrid,
 } from "./helper/road.js";
-import Road from "./buildings/Road.js";
-import Vehicle from "./buildings/Vehicle.js";
+import Road from "./GLTFModel/Road.js";
+import Vehicle from "./GLTFModel/Vehicle.js";
 import Geometry from "./Geometry.js";
 import { calculateDistanceAndAngle, getPoints } from "./helper/point.js";
 import { straightNode } from "./node/straightNode.js";
 import { curveNode } from "./node/curveNode.js";
 import { TIntersectNode } from "./node/TIntersectNode.js";
 import { IntersectNode } from "./node/intersectNode.js";
+import {
+  createArrowInstanceMesh,
+  createGrassInstanceMesh,
+  createPointInstanceMesh,
+  createVehicleInstanceMesh,
+  setArrowPosition,
+  setInstanceMeshObjPosition,
+  setPointPosition,
+} from "./helper/instanceMesh.js";
 const w = window.innerWidth;
 const h = window.innerHeight;
 
@@ -48,7 +57,6 @@ export default class Scene {
     this.previewModel = null;
     this.vehicles = [];
     this.deleteVehicleIds = [];
-    this.pointInstancedMesh = null;
   }
 
   async init() {
@@ -59,17 +67,7 @@ export default class Scene {
     // this.scene.add(this.previewModel.mesh);
   }
 
-  printNodeAndChildren = ({
-    color = "White",
-    node,
-    vehicleId,
-    processedNodes,
-  }) => {
-    const colors = {
-      Red: "#FF0000",
-      Green: "#00FF00",
-      White: "#FFFFFF",
-    };
+  printNodeAndChildren = ({ node, vehicleId, processedNodes }) => {
     const { position: nodeposition } = node;
     if (!node) {
       return; // Skip processing if node is already processed
@@ -78,12 +76,11 @@ export default class Scene {
       node.isEndNode() &&
       !processedNodes.has(`End:${nodeposition.x},${nodeposition.y}`)
     ) {
-      const pointMatrix = new THREE.Matrix4();
-      // Example position for an instance
-      const position = new THREE.Vector3(nodeposition.x, 0, nodeposition.y);
-      pointMatrix.setPosition(position);
-      // Set the matrix at a specific index to make that instance visible
-      this.endPointInstancedMesh.setMatrixAt(this.endPointIndex++, pointMatrix);
+      setPointPosition({
+        position: nodeposition,
+        index: this.endPointIndex++,
+        instanceMesh: this.endPointInstancedMesh,
+      });
 
       processedNodes.add(`End:${nodeposition.x},${nodeposition.y}`);
     }
@@ -91,15 +88,12 @@ export default class Scene {
       node.isRootNode() &&
       !processedNodes.has(`Root:${nodeposition.x},${nodeposition.y}`)
     ) {
-      const rootPointMatrix = new THREE.Matrix4();
-      // Example position for an instance
-      const position = new THREE.Vector3(nodeposition.x, 0, nodeposition.y);
-      rootPointMatrix.setPosition(position);
-      // Set the matrix at a specific index to make that instance visible
-      this.startPointInstancedMesh.setMatrixAt(
-        this.startPointIndex++,
-        rootPointMatrix
-      );
+      setPointPosition({
+        position: nodeposition,
+        index: this.startPointIndex++,
+        instanceMesh: this.startPointInstancedMesh,
+      });
+
       processedNodes.add(`Root:${nodeposition.x},${nodeposition.y}`);
     }
 
@@ -112,52 +106,26 @@ export default class Scene {
       ) {
         return;
       }
-      const { length, angle } = calculateDistanceAndAngle({
+      const { length, angleDeg } = calculateDistanceAndAngle({
         position1: nodeposition,
         position2: childposition,
       });
       // Point
-      // // Example position for an instance
-      const position = new THREE.Vector3(childposition.x, 0, childposition.y);
       if (!child.isEndNode()) {
-        const pointMatrix = new THREE.Matrix4();
-        pointMatrix.setPosition(position);
-        // Set the matrix at a specific index to make that instance visible
-        this.pointInstancedMesh.setMatrixAt(this.pointIndex++, pointMatrix);
+        setPointPosition({
+          position: childposition,
+          index: this.pointIndex++,
+          instanceMesh: this.pointInstancedMesh,
+        });
       }
       // Arrow
-      const arrowMatrix = new THREE.Matrix4();
-      // Convert angles to radians
-      const yRotationAngle = THREE.MathUtils.degToRad(-angle);
-      const zRotationAngle = THREE.MathUtils.degToRad(-90);
-
-      // Create quaternions for each rotation
-      const yRotation = new THREE.Quaternion();
-      const zRotation = new THREE.Quaternion();
-
-      // Set rotations
-      yRotation.setFromAxisAngle(new THREE.Vector3(0, 1, 0), yRotationAngle); // Y-axis rotation
-      zRotation.setFromAxisAngle(new THREE.Vector3(0, 0, 1), zRotationAngle); // Z-axis rotation
-
-      // Combine rotations (note: order matters: first apply Y, then Z)
-      const combinedRotation = new THREE.Quaternion();
-      combinedRotation.multiplyQuaternions(yRotation, zRotation);
-
-      // Set the scale (length adjustment)
-      const lengthScale = new THREE.Vector3(1, length - 0.01, 1); // Adjust X-axis to change length
-
-      // Compose the transformation matrix
-      arrowMatrix.compose(position, combinedRotation, lengthScale);
-      // Apply additional translation (move up by 1 unit)
-      const additionalTranslation = new THREE.Matrix4().makeTranslation(
-        0,
-        -0.5,
-        0
-      );
-      arrowMatrix.multiply(additionalTranslation);
-      // Apply the transformation to the instanced mesh
-      this.arrowInstancedMesh.setMatrixAt(this.arrowIndex++, arrowMatrix);
-
+      setArrowPosition({
+        position: childposition,
+        index: this.arrowIndex++,
+        instanceMesh: this.arrowInstancedMesh,
+        angleDeg,
+        length,
+      });
       processedNodes.add(
         `${nodeposition.x}->${childposition.x},${nodeposition.y}->${childposition.y}`
       );
@@ -171,15 +139,33 @@ export default class Scene {
   };
 
   async setUpPlatform({ width, length }) {
+    const grass = await Grass.create({ maxInstance: width * length });
+    this.grass = grass;
+    this.scene.add(grass.instanceMesh);
+    this.scene.add(
+      Geometry.box({
+        height: 0.1,
+        width,
+        length,
+        color: 0x654321,
+        position: {
+          x: -0.5,
+          y: -0.25,
+          z: -0.5,
+        },
+      })
+    );
     for (let x = 0; x < width; x++) {
       this.roadGrids[x] = [];
       for (let y = 0; y < length; y++) {
         let x_pos = x - Math.floor(width / 2);
         let y_pos = y - Math.floor(length / 2);
-        const grass = new Grass({ x: x_pos, y: y_pos });
+        this.grass.updateInstanceMeshPosition({
+          position: { x: x_pos, y: y_pos },
+          index: x * length + y,
+        });
 
         this.roadGrids[x][y] = [" ", ["", "", "", ""]];
-        this.scene.add(grass.mesh);
       }
     }
 
@@ -338,98 +324,30 @@ export default class Scene {
     };
     this.nodes = joinNodesGrid();
 
-    // Create the geometry and material for the points
-    const arrow = Geometry.cone({
-      position: { x: 0, y: 0, z: 0 },
-      color: 0xffffff,
-    });
-
-    // Create the InstancedMesh with a capacity of 1000 instances
-    this.arrowInstancedMesh = new THREE.InstancedMesh(
-      arrow.geometry,
-      arrow.material,
-      1000 // Maximum number of instances
-    );
-
-    // Create the geometry and material for the points
-    const point = Geometry.point({
-      position: { x: 0, y: 0, z: 0 },
-      color: 0xffffff,
-    });
-
-    // Create the InstancedMesh with a capacity of 1000 instances
-    this.pointInstancedMesh = new THREE.InstancedMesh(
-      point.geometry,
-      point.material,
-      1000 // Maximum number of instances
-    );
-
-    // Create the geometry and material for the points
-    const endPoint = Geometry.point({
-      position: { x: 0, y: 0, z: 0 },
-      color: 0xff0000,
-    });
-
-    // Create the InstancedMesh with a capacity of 1000 instances
-    this.endPointInstancedMesh = new THREE.InstancedMesh(
-      endPoint.geometry,
-      endPoint.material,
-      100 // Maximum number of instances
-    );
-
-    // Create the geometry and material for the points
-    const startPoint = Geometry.point({
-      position: { x: 0, y: 0, z: 0 },
-      color: 0x00ff00,
-    });
-
-    // Create the InstancedMesh with a capacity of 1000 instances
-    this.startPointInstancedMesh = new THREE.InstancedMesh(
-      startPoint.geometry,
-      startPoint.material,
-      1000 // Maximum number of instances
-    );
-
-    // Ensure no instances are visible initially
-    const matrix = new THREE.Matrix4();
-    matrix.setPosition(new THREE.Vector3(1e10, 1e10, 1e10)); // Move out of view
-
-    // Initialize all instances to be out of view or with zero scale
-    for (let i = 0; i < this.pointInstancedMesh.count; i++) {
-      this.pointInstancedMesh.setMatrixAt(i, matrix);
-    }
-
-    for (let i = 0; i < this.endPointInstancedMesh.count; i++) {
-      this.endPointInstancedMesh.setMatrixAt(i, matrix);
-    }
-
-    for (let i = 0; i < this.startPointInstancedMesh.count; i++) {
-      this.startPointInstancedMesh.setMatrixAt(i, matrix);
-    }
-
-    // Initialize all instances to be out of view or with zero scale
-    for (let i = 0; i < this.arrowInstancedMesh.count; i++) {
-      this.arrowInstancedMesh.setMatrixAt(i, matrix);
-    }
-
-    // Mark the instanceMatrix as needing an update
-    this.pointInstancedMesh.instanceMatrix.needsUpdate = true;
-    this.endPointInstancedMesh.instanceMatrix.needsUpdate = true;
-    this.startPointInstancedMesh.instanceMatrix.needsUpdate = true;
-    this.arrowInstancedMesh.instanceMatrix.needsUpdate = true;
-
     // Add the InstancedMesh to the scene
-    this.pointIndex = 0;
-    this.scene.add(this.pointInstancedMesh);
+    const { instanceMesh: pointInstancedMesh, index: pointIndex } =
+      createPointInstanceMesh({ maxCount: 1000 });
+    this.pointIndex = pointIndex;
+    this.pointInstancedMesh = pointInstancedMesh;
+    this.scene.add(pointInstancedMesh);
 
-    this.arrowIndex = 0;
-    this.scene.add(this.arrowInstancedMesh);
+    const { instanceMesh: endPointInstancedMesh, index: endPointIndex } =
+      createPointInstanceMesh({ color: 0xff0000 });
+    this.endPointIndex = endPointIndex;
+    this.endPointInstancedMesh = endPointInstancedMesh;
+    this.scene.add(endPointInstancedMesh);
 
-    this.endPointIndex = 0;
-    this.scene.add(this.endPointInstancedMesh);
+    const { instanceMesh: startPointInstancedMesh, index: startPointIndex } =
+      createPointInstanceMesh({ color: 0x00ff00 });
+    this.startPointIndex = startPointIndex;
+    this.startPointInstancedMesh = startPointInstancedMesh;
+    this.scene.add(startPointInstancedMesh);
 
-    this.startPointIndex = 0;
-    this.scene.add(this.startPointInstancedMesh);
+    const { instanceMesh: arrowInstancedMesh, index: arrowIndex } =
+      createArrowInstanceMesh({ maxCount: 1000 });
+    this.arrowIndex = arrowIndex;
+    this.arrowInstancedMesh = arrowInstancedMesh;
+    this.scene.add(arrowInstancedMesh);
 
     const processedNodes = new Set();
     this.nodes.forEach((n) => {
@@ -441,9 +359,14 @@ export default class Scene {
       });
     });
 
-    // Array.from({ length: 10 }).forEach(() => {
-    //   this.addVehicle();
-    // });
+    let paths = [];
+    Array.from({ length: 10 }).forEach((_, i) => {
+      // const index = Math.floor(Math.random() * this.nodes.length);
+      paths.push(this.nodes[i].getRandomPath());
+    });
+    const vehicle = await Vehicle.create({ maxInstance: 10, paths });
+    this.vehicle = vehicle;
+    this.scene.add(vehicle.instanceMesh);
   }
 
   setupLights({ width, length }) {
@@ -487,13 +410,12 @@ export default class Scene {
     // if (this.deleteVehicleIds.length > 0) {
     //   this.deleteMeshesByName(this.deleteVehicleIds);
     // }
-
     this.vehicles.forEach((vc) => {
-      if (vc.isArrived) {
-        const index = Math.floor(Math.random() * this.nodes.length);
-        const path = this.nodes[index].getRandomPath();
-        vc.resetPosition(path);
-      } else vc.move();
+      // if (vc.isArrived) {
+      //   const index = Math.floor(Math.random() * this.nodes.length);
+      //   const path = this.nodes[index].getRandomPath();
+      //   vc.resetPosition(path);
+      // } else vc.move();
     });
     this.renderer.render(this.scene, this.camera);
   };

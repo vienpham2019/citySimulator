@@ -7,10 +7,13 @@ export default class Geometry {
     width = 1,
     length = 1,
     wireframe = false,
+    position = { x: 0, y: 0, z: 0 },
   }) {
     const geometry = new THREE.BoxGeometry(width, height, length);
     const material = new THREE.MeshLambertMaterial({ color, wireframe });
-    return new THREE.Mesh(geometry, material);
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.position.set(position.x, position.y, position.z);
+    return mesh;
   }
 
   static sphere({

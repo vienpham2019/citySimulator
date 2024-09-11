@@ -3,43 +3,50 @@ import {
   calculateHypotenuse,
   calculateSpeedComponents,
 } from "../helper/point.js";
-import Building from "./Building.js";
+import GLTF from "./GLTF.js";
+import InstanceMesh from "./InstanceMesh.js";
 
-export default class Vehicle extends Building {
+export default class Vehicle extends InstanceMesh {
   static base = { x: 1, z: 1 };
   static offset = { x: 0, y: 0 };
 
-  constructor({ modelUrl, scale, path, speed }) {
-    super({
-      modelUrl,
-      scale,
-    });
-    this.path = path;
+  constructor({ paths, speed, maxInstance }) {
+    super();
+    this.maxInstance = maxInstance;
+    this.paths = paths;
     this.speed = speed;
     this.isArrived = false;
-    this.id = Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
+    this.scale = { x: 1 / 30, y: 1 / 30, z: 1 / 30 };
+    this.modelUrl = "../models/vehicles/car-taxi.glb";
   }
 
-  static async create({
-    scale = { x: 1, y: 1, z: 1 },
-    speed = 0.006,
-    modelUrl = "../models/vehicles/car-taxi.glb",
-    path = [],
-  }) {
-    if (path.length === 0) return null;
-    let [x, y] = path[0].split(",");
-    let position = {
-      x: +x + Vehicle.offset.x,
-      y: 0,
-      z: +y + Vehicle.offset.y,
-    };
-    const obj = await super.create({
-      obj: new Vehicle({ modelUrl, scale, path, speed }),
-      position,
+  static async create({ speed = 0.006, paths = [], maxInstance }) {
+    const obj = await GLTF.create({
+      obj: new Vehicle({ speed, paths, maxInstance }),
+      position: {
+        x: 0,
+        y: 0,
+        z: 0,
+      },
     });
-    obj.mesh.name = obj.id;
-    obj.initVehicleSpeed();
-
+    obj.createInstanceMesh();
+    paths.forEach((path, i) => {
+      if (path.length < 2) {
+        return;
+      }
+      const [x1, y1] = path[0].split(",");
+      const [x2, y2] = path[1].split(",");
+      const { length, angleDeg } = calculateDistanceAndAngle({
+        position1: { x: +x1, y: +y1 },
+        position2: { x: +x2, y: +y2 },
+      });
+      if (Math.abs(angleDeg) === 90) console.log(path);
+      obj.updateInstanceMeshPosition({
+        position: { x: +x1, y: +y1 },
+        angleDeg,
+        index: i,
+      });
+    });
     return obj;
   }
 

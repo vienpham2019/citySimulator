@@ -1,6 +1,6 @@
-import Building from "./Building.js";
+import GLTF from "./GLTF.js";
 
-export default class IndustryFactory extends Building {
+export default class IndustryFactory extends GLTF {
   static base = { x: 2, z: 2 };
   static modelUrl = "../models/buildings/industry-factory-old.glb";
   static offset = { x: 0.5, y: 0.5 };
