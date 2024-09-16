@@ -50,7 +50,7 @@ const calculateDistanceAndAngle = ({ position1, position2 }) => {
 
 const calculateSpeedComponents = (currentPosition, targetPosition, speed) => {
   // Extract positions
-  const { x: x1, z: y1 } = currentPosition;
+  const { x: x1, y: y1 } = currentPosition;
   const { x: x2, y: y2 } = targetPosition;
 
   // Calculate the difference in position

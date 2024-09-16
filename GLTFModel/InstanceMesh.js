@@ -4,71 +4,57 @@ export default class InstanceMesh {
   constructor() {
     this.instanceMesh = new THREE.Group();
   }
-  createInstanceMesh = () => {
+  createInstanceMesh() {
     this.mesh.traverse((child) => {
       if (child.isMesh) {
         // console.log(child);
-        const instanceMesh = new THREE.InstancedMesh(
-          child.geometry, // Geometry from the loaded mesh
-          child.material, // Material from the loaded mesh
-          this.maxInstance // Maximum number of instances
-        );
-        instanceMesh.instanceMatrix.needsUpdate = false;
-        const matrix = new THREE.Matrix4();
-        const { x: scaleX, y: scaleY, z: scaleZ } = this.scale;
-
-        instanceMesh.userData = {
-          x: child.position.x * scaleX,
-          y: child.position.y * scaleY,
-          z: child.position.z * scaleZ,
-        };
-
-        const scale = new THREE.Vector3(scaleX, scaleY, scaleZ);
-        matrix.compose(
-          new THREE.Vector3(1e10, 1e10, 1e10), // set position offscreen
-          new THREE.Quaternion(),
-          scale
-        );
-        for (let i = 0; i < instanceMesh.count; i++) {
-          instanceMesh.setMatrixAt(i, matrix);
-        }
-
-        this.instanceMesh.add(instanceMesh);
+        this.instanceMesh.add(this.initInstanceMesh({ mesh: child }));
       }
     });
-  };
+  }
 
-  updateInstanceMeshPosition = ({ position, index, angleDeg = 0 }) => {
-    const rotateAngle = parseFloat((-angleDeg + 90) % 360).toFixed(2);
-    const degToRad = parseFloat(THREE.MathUtils.degToRad(rotateAngle)).toFixed(
-      2
+  initInstanceMesh({ mesh, offset = { x: 0, y: 0, z: 0 } }) {
+    const instanceMesh = new THREE.InstancedMesh(
+      mesh.geometry, // Geometry from the loaded mesh
+      mesh.material, // Material from the loaded mesh
+      this.maxInstance // Maximum number of instances
     );
 
+    const matrix = new THREE.Matrix4();
+    const { x: scaleX, y: scaleY, z: scaleZ } = this.scale;
+
+    instanceMesh.userData = {
+      x: mesh.position.x * scaleX + offset.x,
+      y: mesh.position.y * scaleY + offset.y,
+      z: mesh.position.z * scaleZ + offset.z,
+    };
+
+    const scale = new THREE.Vector3(scaleX, scaleY, scaleZ);
+    matrix.compose(
+      new THREE.Vector3(1e10, 1e10, 1e10), // set position offscreen
+      new THREE.Quaternion(),
+      scale
+    );
+    for (let i = 0; i < instanceMesh.count; i++) {
+      instanceMesh.setMatrixAt(i, matrix);
+    }
+    return instanceMesh;
+  }
+
+  updateInstanceMeshPosition({ position, index, angleRadians = 0 }) {
     this.instanceMesh.children.forEach((instanceMesh) => {
-      let updatePosition = {
-        x: position.x,
-        y: 0,
-        z: position.y,
-      };
       this.setInstanceMeshObjPosition({
-        position: updatePosition,
+        position,
         index,
         instanceMesh,
-        angleRadians: degToRad,
+        angleRadians,
       });
     });
-  };
+  }
 
-  setInstanceMeshObjPosition = ({
-    position,
-    index,
-    instanceMesh,
-    angleRadians,
-  }) => {
+  setInstanceMeshObjPosition({ position, index, instanceMesh, angleRadians }) {
+    instanceMesh.instanceMatrix.needsUpdate = true;
     const matrix = new THREE.Matrix4();
-
-    instanceMesh.getMatrixAt(index, matrix);
-
     // Extract the existing scale from the matrix
     const rotation = new THREE.Quaternion();
     rotation.setFromAxisAngle(new THREE.Vector3(0, 1, 0), angleRadians);
@@ -77,6 +63,7 @@ export default class InstanceMesh {
       vector: { x: instanceMesh.userData.x, y: instanceMesh.userData.z },
       angleRadians: -angleRadians,
     });
+
     matrix.compose(
       new THREE.Vector3(
         position.x + rotateOffsetX,
@@ -89,5 +76,5 @@ export default class InstanceMesh {
 
     // Set the matrix at a specific index to make that instance visible
     instanceMesh.setMatrixAt(index, matrix);
-  };
+  }
 }

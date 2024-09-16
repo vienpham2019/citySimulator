@@ -25,4 +25,15 @@ export default class Grass extends InstanceMesh {
     obj.createInstanceMesh();
     return obj;
   }
+
+  updateInstanceMeshPosition({ position, index }) {
+    super.updateInstanceMeshPosition({
+      position: {
+        x: position.x,
+        y: 0,
+        z: position.y,
+      },
+      index,
+    });
+  }
 }

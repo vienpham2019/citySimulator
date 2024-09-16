@@ -51,8 +51,8 @@ class Node {
   getRandomPath() {
     let endNode = this;
     let count = 0;
-    while (!endNode.isEndNode() && (count > 2 || Math.random() < 0.9)) {
-      if (count < 2) count++;
+    while (this.endNode !== endNode && (count > 5 || Math.random() < 0.9)) {
+      if (count < 5) count++;
       if (endNode.children.length > 0) {
         const randomIndex = Math.floor(Math.random() * endNode.children.length);
         const child = endNode.children[randomIndex];

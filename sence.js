@@ -24,6 +24,8 @@ import {
   setInstanceMeshObjPosition,
   setPointPosition,
 } from "./helper/instanceMesh.js";
+import { getVertices } from "./helper/rectangle.js";
+import { getLineIntersection } from "./helper/intersection.js";
 const w = window.innerWidth;
 const h = window.innerHeight;
 
@@ -366,7 +368,81 @@ export default class Scene {
     });
     const vehicle = await Vehicle.create({ maxInstance: 10, paths });
     this.vehicle = vehicle;
-    this.scene.add(vehicle.instanceMesh);
+    const rect1 = {
+      x: 0,
+      y: 0,
+      width: 1,
+      length: 2,
+      rotation: (Math.PI * Math.PI) / 4,
+    };
+    const rect2 = {
+      x: 0,
+      y: 0,
+      width: 1,
+      length: 2,
+      rotation: Math.PI,
+    };
+    const rectVertices = getVertices(rect1);
+    const rectVertices2 = getVertices(rect2);
+
+    const drawLine = (p1, p2, color = 0xff0000) => {
+      const points = [
+        new THREE.Vector3(p1.x, 1, p1.y),
+        new THREE.Vector3(p2.x, 1, p2.y),
+      ];
+
+      const geometry = new THREE.BufferGeometry().setFromPoints(points);
+
+      // 2. Create a material for the line
+      const material = new THREE.LineBasicMaterial({ color }); // Red line
+
+      // 3. Create the line object
+      const line = new THREE.Line(geometry, material);
+
+      // 4. Add the line to the scene
+      this.scene.add(line);
+    };
+
+    const drawDot = ({ x, y }, color = 0x808080) => {
+      const vertices = new Float32Array([x, 1, y]); // Dot at (0, 0, 0)
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute("position", new THREE.BufferAttribute(vertices, 3));
+
+      // 2. Create a material for the dot (point)
+      const material = new THREE.PointsMaterial({
+        color, // Red color
+        size: 0.05, // Size of the point
+      });
+
+      // 3. Create the Points object
+      const dot = new THREE.Points(geometry, material);
+
+      // 4. Add the dot to the scene
+      this.scene.add(dot);
+    };
+
+    const drawRect = (vertices, color = 0xff0000) => {
+      drawLine(vertices.TopRight, vertices.TopLeft, color);
+      drawLine(vertices.TopRight, vertices.BottomRight, color);
+      drawLine(vertices.BottomLeft, vertices.BottomRight, 0xff00ff);
+      drawLine(vertices.TopLeft, vertices.BottomLeft, color);
+    };
+    drawRect(rectVertices);
+    drawRect(rectVertices2, 0xffee00);
+    const rectLines = [
+      [rectVertices.TopRight, rectVertices.TopLeft],
+      [rectVertices.TopRight, rectVertices.BottomRight],
+      [rectVertices.BottomLeft, rectVertices.BottomRight],
+      [rectVertices.TopLeft, rectVertices.BottomLeft],
+    ];
+    const line = [rectVertices2.TopRight, rectVertices2.BottomRight];
+    rectLines.forEach((r_line) => {
+      const intersect = getLineIntersection(line, r_line);
+      if (intersect) drawDot(intersect, 0xffffff);
+    });
+
+    // console.log(areRectanglesColliding(rect1, rect2));
+    // this.scene.add(vehicle.instanceMesh);
   }
 
   setupLights({ width, length }) {
@@ -403,20 +479,19 @@ export default class Scene {
     //   vehicleId: vehicle.id,
     // });
     this.scene.add(vehicle.mesh);
-    this.vehicles.push(vehicle);
+    // this.vehicles.push(vehicle);
   };
 
   draw = () => {
-    // if (this.deleteVehicleIds.length > 0) {
-    //   this.deleteMeshesByName(this.deleteVehicleIds);
-    // }
-    this.vehicles.forEach((vc) => {
-      // if (vc.isArrived) {
-      //   const index = Math.floor(Math.random() * this.nodes.length);
-      //   const path = this.nodes[index].getRandomPath();
-      //   vc.resetPosition(path);
-      // } else vc.move();
-    });
+    if (this.vehicle) {
+      if (this.vehicle.getIsAvaliable()) {
+        const index = Math.floor(Math.random() * this.nodes.length);
+        this.vehicle.addPath(this.nodes[index].getRandomPath());
+      }
+
+      // this.vehicle.move();
+    }
+
     this.renderer.render(this.scene, this.camera);
   };
 
