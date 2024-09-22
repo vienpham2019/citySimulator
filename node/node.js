@@ -49,19 +49,19 @@ class Node {
 
   // Collect all descendants recursively
   getRandomPath() {
-    let endNode = this;
+    let current = this;
     let count = 0;
-    while (this.endNode !== endNode && (count > 5 || Math.random() < 0.9)) {
-      if (count < 5) count++;
-      if (endNode.children.length > 0) {
-        const randomIndex = Math.floor(Math.random() * endNode.children.length);
-        const child = endNode.children[randomIndex];
-        endNode = child;
-      } else {
-        break; // No children to traverse
+    while (!current.isEndNode() && (count < 20 || Math.random() < 0.9)) {
+      if (count < 20) count++;
+      let childs = current.children;
+      if (childs.length > 1) {
+        childs = childs.filter((c) => !c.isEndNode());
       }
+      const randomIndex = Math.floor(Math.random() * childs.length);
+      current = childs[randomIndex];
     }
-    return this.findPath(endNode).map(({ position: { x, y } }) => `${x},${y}`);
+
+    return this.findPath(current).map(({ position: { x, y } }) => `${x},${y}`);
   }
 
   findPath(endNode) {

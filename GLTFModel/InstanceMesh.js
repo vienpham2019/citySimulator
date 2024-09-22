@@ -41,8 +41,15 @@ export default class InstanceMesh {
     return instanceMesh;
   }
 
-  updateInstanceMeshPosition({ position, index, angleRadians = 0 }) {
-    this.instanceMesh.children.forEach((instanceMesh) => {
+  updateInstanceMeshPosition({
+    position,
+    index,
+    angleRadians = 0,
+    isAll = true,
+    subIndex = [],
+  }) {
+    this.instanceMesh.children.forEach((instanceMesh, i) => {
+      if (!isAll && !subIndex.includes(i)) return;
       this.setInstanceMeshObjPosition({
         position,
         index,
@@ -76,5 +83,11 @@ export default class InstanceMesh {
 
     // Set the matrix at a specific index to make that instance visible
     instanceMesh.setMatrixAt(index, matrix);
+  }
+
+  setOpacity({ index, subIndexs = [], opacity = 1 }) {
+    subIndexs.forEach({});
+    this.instanceMesh.children[index].material.transparent = true;
+    this.instanceMesh.children[index].material.opacity = 0;
   }
 }

@@ -1,5 +1,17 @@
 import * as THREE from "three";
-const getVertices = (rect) => {
+const verticalVertices = ({ x, y, rotation, length }) => {
+  const cos = Math.cos(rotation); // rotation in radians
+  const sin = Math.sin(rotation);
+
+  // First point (origin point after applying rotation)
+  const firstPoint = new THREE.Vector2(x, y);
+
+  // Second point (moved along the length in the direction of rotation)
+  const secondPoint = new THREE.Vector2(x + cos * length, y + sin * length);
+
+  return [firstPoint, secondPoint];
+};
+const getRectVertices = (rect) => {
   const halfWidth = rect.width / 2;
   const halfLength = rect.length / 2;
 
@@ -27,8 +39,4 @@ const getVertices = (rect) => {
   };
 };
 
-// const areRectanglesColliding = (rect1Vertices, rect2Vertices) => {
-
-// }
-
-export { getVertices };
+export { getRectVertices, verticalVertices };

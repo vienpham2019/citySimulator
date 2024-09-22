@@ -6,26 +6,25 @@ import {
 } from "../helper/point.js";
 import GLTF from "./GLTF.js";
 import InstanceMesh from "./InstanceMesh.js";
+import { degreesToRadians } from "../helper/index.js";
+import { getRectVertices, verticalVertices } from "../helper/vertice.js";
+import { getLineIntersection } from "../helper/intersection.js";
 
 export default class Vehicle extends InstanceMesh {
-  static base = { x: 1, z: 1 };
-  static offset = { x: 0, y: 0 };
   static scale = { x: 1 / 30, y: 1 / 30, z: 1 / 30 };
   static hitBox = {
-    offset: { x: 0, y: 0 },
+    width: 2 * Vehicle.scale.x,
     length: 5.5 * Vehicle.scale.y,
-    width: 2 * Vehicle.scale.x,
+    rotation: Math.PI,
   };
-  static collisionBox = {
-    offset: { x: 0, y: 0.1 },
-    length: 0.5 * Vehicle.scale.y,
-    width: 2 * Vehicle.scale.x,
-  };
+
+  static offset = { x: 0, y: 0 };
 
   constructor({ speed, maxInstance }) {
     super();
     this.maxInstance = maxInstance;
-    this.usedInstanceIndex = [];
+    this.avalableIndex = Array.from({ length: maxInstance }, (_, i) => i);
+    this.usedInstanceIndex = {};
     this.maxSpeed = speed;
     this.speed = speed;
     this.scale = Vehicle.scale;
@@ -33,7 +32,7 @@ export default class Vehicle extends InstanceMesh {
     this.position = { x: 0, y: 0 };
   }
 
-  static async create({ speed = 0.016, paths = [], maxInstance }) {
+  static async create({ speed = 0.01, paths = [], maxInstance }) {
     const obj = await GLTF.create({
       obj: new Vehicle({
         speed,
@@ -49,8 +48,46 @@ export default class Vehicle extends InstanceMesh {
     return obj;
   }
 
+  getInstanceHitBoxAndRay = ({ index }) => {
+    const instance = this.usedInstanceIndex[index];
+    if (!instance) return;
+    const {
+      angleRadians,
+      position: { x, y },
+    } = instance;
+
+    return {
+      hitBox: {
+        ...Vehicle.hitBox,
+        x,
+        y,
+        rotation: -angleRadians,
+      },
+      rays: [
+        {
+          x,
+          y,
+          length: 5 * Vehicle.scale.y,
+          rotation: -angleRadians + degreesToRadians(90),
+        },
+        {
+          x,
+          y,
+          length: 4 * Vehicle.scale.y,
+          rotation: -angleRadians + degreesToRadians(70),
+        },
+        {
+          x,
+          y,
+          length: 4 * Vehicle.scale.y,
+          rotation: -angleRadians + degreesToRadians(110),
+        },
+      ],
+    };
+  };
+
   getIsAvaliable() {
-    return this.maxInstance !== this.usedInstanceIndex.length;
+    return this.avalableIndex.length > 0;
   }
 
   init({ paths = [] }) {
@@ -61,8 +98,8 @@ export default class Vehicle extends InstanceMesh {
 
   addPath(path) {
     if (!this.getIsAvaliable() || path.length < 2) return;
-    const index = this.usedInstanceIndex.length;
-    this.usedInstanceIndex.push({ path, speed: this.maxSpeed });
+    const index = this.avalableIndex.shift();
+    this.usedInstanceIndex[index] = { path, speed: this.maxSpeed };
     this.updateUsedInstanceIndex({ index });
     const { angleRadians, position } = this.usedInstanceIndex[index];
     this.updateInstanceMeshPosition({
@@ -105,14 +142,70 @@ export default class Vehicle extends InstanceMesh {
     };
   }
 
+  getHitBoxAndRaysVertices({ index }) {
+    const { hitBox, rays } = this.getInstanceHitBoxAndRay({ index });
+    const { TopRight, TopLeft, BottomLeft, BottomRight } =
+      getRectVertices(hitBox);
+    return {
+      hitBox: [
+        [TopRight, TopLeft],
+        [TopRight, BottomRight],
+        [BottomLeft, BottomRight],
+        [TopLeft, BottomLeft],
+      ],
+      rays: rays.map((r) => verticalVertices(r)),
+    };
+  }
+  checkRectangleCollision(rect1Edges, rect2Edges) {
+    for (let line1 of rect1Edges) {
+      for (let line2 of rect2Edges) {
+        const intersect = getLineIntersection(line1, line2);
+        if (intersect) {
+          return true; // Collision detected
+        }
+      }
+    }
+    return false; // No collision detected
+  }
+
+  checkCollision({ index }) {
+    const {
+      position: { x: currentX, y: currentY },
+    } = this.usedInstanceIndex[index];
+    for (let targetIndex in this.usedInstanceIndex) {
+      if (targetIndex === index) break;
+      const {
+        position: { x: targetX, y: targetY },
+      } = this.usedInstanceIndex[index];
+      if (
+        Math.round(currentX) !== Math.round(targetX) &&
+        Math.round(currentY) !== Math.round(targetY)
+      ) {
+        break;
+      }
+
+      const { rays: raysVertices1 } = this.getHitBoxAndRaysVertices({
+        index: index,
+      });
+      const { hitBox: hitBoxVertices2 } = this.getHitBoxAndRaysVertices({
+        index: targetIndex,
+      });
+      const collition = this.checkRectangleCollision(
+        raysVertices1,
+        hitBoxVertices2
+      );
+      if (collition) return true;
+    }
+    return false;
+  }
+
   move() {
     if (this.avaliable === this.maxInstance) return;
-
-    this.usedInstanceIndex.forEach(
-      (
+    Object.entries(this.usedInstanceIndex).forEach(
+      ([
+        index,
         { path, position, angleRadians, distanceToNextNode, speedOffset },
-        index
-      ) => {
+      ]) => {
         if (path.length <= 1) {
           // move last instance of array out of sence
           this.updateInstanceMeshPosition({
@@ -122,10 +215,12 @@ export default class Vehicle extends InstanceMesh {
               z: 0,
             },
             angleRadians,
-            index: this.usedInstanceIndex.length - 1,
+            index,
           });
-          this.usedInstanceIndex.splice(index, 1);
+          this.avalableIndex.push(index);
+          delete this.usedInstanceIndex[index];
         } else {
+          if (this.checkCollision({ index })) return;
           const distanceDiff = calculateHypotenuse(
             speedOffset.speedX,
             speedOffset.speedY

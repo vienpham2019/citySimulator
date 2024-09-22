@@ -16,6 +16,56 @@ export default class Geometry {
     return mesh;
   }
 
+  static circle({ radius, color, wireframe = false }) {
+    // Create the geometry for the circle
+    const circleGeometry = new THREE.CircleGeometry(radius, 32);
+
+    // Create a material for the circle
+    const circleMaterial = new THREE.MeshBasicMaterial({ color, wireframe });
+
+    // Create the circle mesh
+    return new THREE.Mesh(circleGeometry, circleMaterial);
+  }
+
+  static nGon({
+    sides = 6,
+    color = 0xd3d3d3,
+    radius = 5,
+    wireframe = false,
+    position = { x: 0, y: 0, z: 0 },
+    rotation = 0,
+  }) {
+    // Create a shape for the octagon
+    const shape = new THREE.Shape();
+
+    // Define the vertices of the octagon
+    for (let i = 0; i < sides; i++) {
+      const angle = (i / sides) * Math.PI * 2; // Angle for each vertex
+      const x = radius * Math.cos(angle); // X coordinate
+      const y = radius * Math.sin(angle); // Y coordinate
+      if (i === 0) {
+        shape.moveTo(x, y); // Start the shape at the first vertex
+      } else {
+        shape.lineTo(x, y); // Draw lines to the other vertices
+      }
+    }
+
+    // Close the shape
+    shape.closePath();
+
+    // Create geometry from the shape
+    const geometry = new THREE.ShapeGeometry(shape);
+
+    // Create a material
+    const material = new THREE.MeshBasicMaterial({ color, wireframe });
+
+    // Create the mesh from geometry and material
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.position.set(position.x, position.y, position.z);
+    mesh.rotation.z = rotation;
+    return mesh;
+  }
+
   static sphere({
     height = 1,
     color = 0xd3d3d3,
