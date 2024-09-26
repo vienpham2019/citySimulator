@@ -59,6 +59,7 @@ export default class Scene {
     this.buildingsToGrow = [];
     this.hoverObjects = [];
     this.previewModel = null;
+    this.trafficLight = null;
     this.vehicles = [];
     this.deleteVehicleIds = [];
   }
@@ -141,6 +142,34 @@ export default class Scene {
     });
     return node;
   };
+
+  drawLine(p1, p2, color = 0xff0000) {
+    const points = [
+      new THREE.Vector3(p1.x, 0.02, p1.y),
+      new THREE.Vector3(p2.x, 0.02, p2.y),
+    ];
+
+    const geometry = new THREE.BufferGeometry().setFromPoints(points);
+
+    // 2. Create a material for the line
+    const material = new THREE.LineBasicMaterial({ color }); // Red line
+
+    // 3. Create the line object
+    const line = new THREE.Line(geometry, material);
+
+    // 4. Add the line to the scene
+    this.scene.add(line);
+    return line;
+  }
+
+  drawRect(vertices, color = 0xff0000) {
+    return [
+      this.drawLine(vertices.TopRight, vertices.TopLeft, color),
+      this.drawLine(vertices.TopRight, vertices.BottomRight, color),
+      this.drawLine(vertices.BottomLeft, vertices.BottomRight, 0xff00ff),
+      this.drawLine(vertices.TopLeft, vertices.BottomLeft, color),
+    ];
+  }
 
   async setUpPlatform({ width, length }) {
     const grass = await Grass.create({ maxInstance: width * length });
@@ -371,25 +400,6 @@ export default class Scene {
     const vehicle = await Vehicle.create({ maxInstance: 10, paths });
     this.vehicle = vehicle;
 
-    const drawLine = (p1, p2, color = 0xff0000) => {
-      const points = [
-        new THREE.Vector3(p1.x, 0.02, p1.y),
-        new THREE.Vector3(p2.x, 0.02, p2.y),
-      ];
-
-      const geometry = new THREE.BufferGeometry().setFromPoints(points);
-
-      // 2. Create a material for the line
-      const material = new THREE.LineBasicMaterial({ color }); // Red line
-
-      // 3. Create the line object
-      const line = new THREE.Line(geometry, material);
-
-      // 4. Add the line to the scene
-      this.scene.add(line);
-      return line;
-    };
-
     // const drawDot = ({ x, y }, color = 0x808080) => {
     //   const vertices = new Float32Array([x, 0.1, y]); // Dot at (0, 0, 0)
     //   const geometry = new THREE.BufferGeometry();
@@ -408,15 +418,6 @@ export default class Scene {
     //   this.scene.add(dot);
     // };
 
-    const drawRect = (vertices, color = 0xff0000) => {
-      return [
-        drawLine(vertices.TopRight, vertices.TopLeft, color),
-        drawLine(vertices.TopRight, vertices.BottomRight, color),
-        drawLine(vertices.BottomLeft, vertices.BottomRight, 0xff00ff),
-        drawLine(vertices.TopLeft, vertices.BottomLeft, color),
-      ];
-    };
-
     // Object.keys(vehicle.usedInstanceIndex).forEach((index) => {
     //   console.log(index);
     //   const { hitBox, rays } = vehicle.getInstanceHitBoxAndRay({
@@ -430,8 +431,13 @@ export default class Scene {
     //   });
     // });
     const trafficLight = await TrafficLight.create({
-      maxInstance: 10,
+      maxInstance: this.s_length * this.s_width * 4,
     });
+    trafficLight.createIntersectLight({
+      position: { x: 1, y: 0, z: -1 },
+      intersectCount: 4,
+    });
+
     const sides = 6;
     const radius = 0.133;
     const rotation = Math.PI / 2;
@@ -523,14 +529,29 @@ export default class Scene {
     if (this.trafficLight) {
       this.trafficLight.update();
     }
+    const hitBoxs = [];
     if (this.vehicle) {
+      this.vehicle.move(this.trafficLight);
       if (this.vehicle.getIsAvaliable()) {
         const index = Math.floor(Math.random() * this.nodes.length);
         this.vehicle.addPath(this.nodes[index].getRandomPath());
       }
+      // Object.entries(this.vehicle.usedInstanceIndex).forEach(([index]) => {
+      //   const { hitBox, rays } = this.vehicle.getInstanceHitBoxAndRay({
+      //     index,
+      //   });
+      //   const lines = this.drawRect(getRectVertices(hitBox));
+      //   rays.forEach((ray) => {
+      //     const rayVertices = verticalVertices(ray);
+      //     lines.push(this.drawLine(rayVertices[0], rayVertices[1]));
+      //   });
 
-      this.vehicle.move();
+      //   setTimeout(() => {
+      //     lines.forEach((line) => this.deleteMesh(line));
+      //   }, 10);
+      // });
     }
+    // hitBoxs.forEach((lines) => lines.forEach((line) => this.deleteMesh(line)));
 
     this.renderer.render(this.scene, this.camera);
   };

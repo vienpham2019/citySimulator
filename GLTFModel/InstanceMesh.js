@@ -48,20 +48,35 @@ export default class InstanceMesh {
     isAll = true,
     subIndex = [],
   }) {
-    this.instanceMesh.children.forEach((instanceMesh, i) => {
-      if (!isAll && !subIndex.includes(i)) return;
-      this.setInstanceMeshObjPosition({
-        position,
-        index,
-        instanceMesh,
-        angleRadians,
+    if (isAll) {
+      this.instanceMesh.children.forEach((instanceMesh) => {
+        this.setInstanceMeshObjPosition({
+          position,
+          index,
+          instanceMesh,
+          angleRadians,
+        });
       });
-    });
+    } else {
+      subIndex.forEach(([indexs, position]) => {
+        indexs.forEach((i) => {
+          const instanceMesh = this.instanceMesh.children[i];
+
+          this.setInstanceMeshObjPosition({
+            position,
+            index,
+            instanceMesh,
+            angleRadians,
+          });
+        });
+      });
+    }
   }
 
   setInstanceMeshObjPosition({ position, index, instanceMesh, angleRadians }) {
     instanceMesh.instanceMatrix.needsUpdate = true;
     const matrix = new THREE.Matrix4();
+
     // Extract the existing scale from the matrix
     const rotation = new THREE.Quaternion();
     rotation.setFromAxisAngle(new THREE.Vector3(0, 1, 0), angleRadians);
@@ -83,11 +98,5 @@ export default class InstanceMesh {
 
     // Set the matrix at a specific index to make that instance visible
     instanceMesh.setMatrixAt(index, matrix);
-  }
-
-  setOpacity({ index, subIndexs = [], opacity = 1 }) {
-    subIndexs.forEach({});
-    this.instanceMesh.children[index].material.transparent = true;
-    this.instanceMesh.children[index].material.opacity = 0;
   }
 }

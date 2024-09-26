@@ -32,7 +32,7 @@ export default class GLTF {
     return targetBoundingBox.intersectsBox(thisBoundingBox);
   }
 
-  static async create({ obj, position }) {
+  static async create({ obj, position = { x: 0, y: 0, z: 0 } }) {
     try {
       obj.mesh = await GLTF.#loadGLTF({ position, obj });
       return obj;

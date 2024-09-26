@@ -9,8 +9,9 @@ export default class Grass extends InstanceMesh {
     super();
     this.maxInstance = maxInstance;
     this.name = "Grass";
-    this.scale = { x: 1 / 30, y: 1 / 30, z: 1 / 30 };
-    this.modelUrl = "../models/grass/tile-plain_grass.glb";
+    this.scale = { x: 3.4, y: 3.4, z: 3.4 };
+    // this.modelUrl = "../models/grass/tile-plain_grass.glb";
+    this.modelUrl = "../models/roads/tile-mainroad-intersection.glb";
   }
 
   static async create({ maxInstance = 10 }) {
