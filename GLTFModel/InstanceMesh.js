@@ -22,15 +22,6 @@ export default class InstanceMesh {
       this.maxInstance // Maximum number of instances
     );
 
-    // // Create an empty buffer for color data (4 components per instance: R, G, B, A)
-    // const colors = new Float32Array(this.maxInstance * 4); // RGBA values
-
-    // // Create an InstancedBufferAttribute and attach it to the geometry
-    // instanceMesh.geometry.setAttribute(
-    //   "color",
-    //   new THREE.InstancedBufferAttribute(colors, 4)
-    // );
-
     const matrix = new THREE.Matrix4();
     const { x: scaleX, y: scaleY, z: scaleZ } = this.scale;
 

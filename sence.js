@@ -34,6 +34,7 @@ import GLTF from "./GLTFModel/GLTF.js";
 import TrafficLight from "./GLTFModel/TrafficLight.js";
 const w = window.innerWidth;
 const h = window.innerHeight;
+import { insObjKeys } from "./enum/sence.js";
 
 export default class Scene {
   constructor({ width = 10, length = 10 }) {
@@ -66,15 +67,16 @@ export default class Scene {
     this.trafficLight = null;
     this.vehicles = [];
     this.deleteVehicleIds = [];
-    this.grass;
+    this.instanceObjs = {};
+    this.platformGrids = [];
   }
 
-  async init() {
-    // this.previewModel = await Vehicle.create({
-    //   x: 0,
-    //   y: 0,
-    // });
-    // this.scene.add(this.previewModel.mesh);
+  async init({ width, length }) {
+    const roads = await Road.create({ maxInstance: width * length });
+    this.roads = roads;
+    Object.entries(roads).forEach(([_, roadObj]) => {
+      this.scene.add(roadObj.instanceMesh);
+    });
   }
   getPositionOfPlatformIndex({ index }) {
     // platform in 2d grid and index is in 1d
@@ -188,8 +190,7 @@ export default class Scene {
 
   async setUpPlatform({ width, length }) {
     const grass = await Grass.create({ maxInstance: width * length });
-    this.grass = grass;
-
+    this.instanceObjs[insObjKeys.Grass] = grass;
     this.scene.add(grass.instanceMesh);
     this.scene.add(
       Geometry.box({
@@ -209,8 +210,8 @@ export default class Scene {
       for (let y = 0; y < length; y++) {
         let x_pos = x - Math.floor(width / 2);
         let y_pos = y - Math.floor(length / 2);
-
-        this.grass.updateInstanceMeshPosition({
+        this.platformGrids.push(insObjKeys.Grass);
+        this.instanceObjs[insObjKeys.Grass].updateInstanceMeshPosition({
           position: { x: x_pos, y: y_pos },
           index: x * width + y,
         });
@@ -730,28 +731,29 @@ export default class Scene {
     this.updateMousePosition(e);
     const intersections = this.getIntersections();
     if (intersections.length > 0) {
-      this.grass.highlightByInstanceIndex({
+      this.instanceObjs[insObjKeys.Grass].highlightByInstanceIndex({
         index: intersections[0].instanceId,
       });
     }
-    // if (this.hoverObjects.length > 0) {
-    //   this.handleRoadGrid();
-    // }
   }
 
   onHoverObject(e) {
     this.updateMousePosition(e);
     const intersections = this.getIntersections();
+    this.instanceObjs[insObjKeys.Grass].removeHilightInstance();
     if (intersections.length > 0) {
-      const cornerPosition = this.grass.getInstanceMeshPosition({
+      const cornerPosition = this.instanceObjs[
+        insObjKeys.Grass
+      ].getInstanceMeshPosition({
         index: intersections[0].instanceId,
       });
       const instanceIds = this.getChildrenInGrid({
         cornerPosition,
         gridSize: { x: 1, z: 1 },
       });
-      this.grass.changeInstanceColor({ indexs: instanceIds });
-    } else {
+      this.instanceObjs[insObjKeys.Grass].changeInstanceColor({
+        indexs: instanceIds,
+      });
     }
   }
 

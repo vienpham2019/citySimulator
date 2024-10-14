@@ -11,10 +11,9 @@ export default class Grass extends InstanceMesh {
     super();
     this.maxInstance = maxInstance;
     this.name = "Grass";
-    this.scale = { x: 3.34, y: 3.34, z: 3.34 };
-    // this.modelUrl = "../models/grass/tile-plain_grass.glb";
-    this.modelUrl = "../models/roads/tile-mainroad-intersection.glb";
-    this.prevHilightIndex = null;
+    this.scale = { x: 1 / 30, y: 1 / 30, z: 1 / 30 };
+    this.modelUrl = "../models/grass/tile-plain_grass.glb";
+    this.prevHilightIndex = [];
   }
 
   static async create({ maxInstance = 10 }) {
@@ -57,14 +56,8 @@ export default class Grass extends InstanceMesh {
   changeInstanceColor({ indexs }) {
     const red = 0xff0000;
     const gray = 0x708090;
-    const white = 0xffffff;
+    this.prevHilightIndexs = [];
     for (const instanceMesh of this.instanceMesh.children) {
-      if (this.prevHilightIndexs?.length > 0) {
-        this.prevHilightIndexs.forEach((index) => {
-          instanceMesh.setColorAt(index, color.setHex(white));
-        });
-      }
-      this.prevHilightIndexs = [];
       indexs.forEach((index) => {
         instanceMesh.setColorAt(index, color.setHex(gray));
         instanceMesh.instanceColor.needsUpdate = true;
@@ -72,6 +65,17 @@ export default class Grass extends InstanceMesh {
       });
       break;
     }
+  }
+
+  removeHilightInstance() {
+    if (!this.prevHilightIndexs || this.prevHilightIndexs?.length === 0) return;
+    const white = 0xffffff;
+    for (const instanceMesh of this.instanceMesh.children) {
+      this.prevHilightIndexs.forEach((index) => {
+        instanceMesh.setColorAt(index, color.setHex(white));
+      });
+    }
+    this.prevHilightIndexs = [];
   }
 
   updateInstanceMeshPosition({ position, index }) {

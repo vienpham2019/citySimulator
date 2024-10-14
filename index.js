@@ -16,7 +16,7 @@ import Scene from "./sence.js";
 const width = 20;
 const length = 20;
 const myScene = new Scene({ width, length });
-myScene.init();
+myScene.init({ width, length });
 new OrbitControls(myScene.camera, myScene.renderer.domElement);
 
 window.onload = () => {
