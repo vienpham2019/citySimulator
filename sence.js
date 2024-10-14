@@ -24,7 +24,11 @@ import {
   setInstanceMeshObjPosition,
   setPointPosition,
 } from "./helper/instanceMesh.js";
-import { getRectVertices, verticalVertices } from "./helper/vertice.js";
+import {
+  getRectVertices,
+  rotatePointAroundCenter,
+  verticalVertices,
+} from "./helper/vertice.js";
 import { getLineIntersection } from "./helper/intersection.js";
 import GLTF from "./GLTFModel/GLTF.js";
 import TrafficLight from "./GLTFModel/TrafficLight.js";
@@ -62,6 +66,7 @@ export default class Scene {
     this.trafficLight = null;
     this.vehicles = [];
     this.deleteVehicleIds = [];
+    this.grass;
   }
 
   async init() {
@@ -70,6 +75,16 @@ export default class Scene {
     //   y: 0,
     // });
     // this.scene.add(this.previewModel.mesh);
+  }
+  getPositionOfPlatformIndex({ index }) {
+    // platform in 2d grid and index is in 1d
+    const row = Math.floor(index / this.s_length);
+    const col = index % this.s_width;
+
+    let x = col - Math.floor(this.s_width / 2);
+    let y = row - Math.floor(this.s_length / 2);
+
+    return { x, y };
   }
 
   printNodeAndChildren = ({ node, vehicleId, processedNodes }) => {
@@ -174,6 +189,7 @@ export default class Scene {
   async setUpPlatform({ width, length }) {
     const grass = await Grass.create({ maxInstance: width * length });
     this.grass = grass;
+
     this.scene.add(grass.instanceMesh);
     this.scene.add(
       Geometry.box({
@@ -193,9 +209,10 @@ export default class Scene {
       for (let y = 0; y < length; y++) {
         let x_pos = x - Math.floor(width / 2);
         let y_pos = y - Math.floor(length / 2);
+
         this.grass.updateInstanceMeshPosition({
           position: { x: x_pos, y: y_pos },
-          index: x * length + y,
+          index: x * width + y,
         });
 
         this.roadGrids[x][y] = [" ", ["", "", "", ""]];
@@ -383,14 +400,14 @@ export default class Scene {
     this.scene.add(arrowInstancedMesh);
 
     const processedNodes = new Set();
-    this.nodes.forEach((n) => {
-      this.printNodeAndChildren({
-        color: "Green",
-        node: n,
-        vehicleId: "vehicle.id",
-        processedNodes,
-      });
-    });
+    // this.nodes.forEach((n) => {
+    //   this.printNodeAndChildren({
+    //     color: "Green",
+    //     node: n,
+    //     vehicleId: "vehicle.id",
+    //     processedNodes,
+    //   });
+    // });
 
     let paths = [];
     Array.from({ length: 10 }).forEach((_, i) => {
@@ -418,18 +435,37 @@ export default class Scene {
     //   this.scene.add(dot);
     // };
 
-    // Object.keys(vehicle.usedInstanceIndex).forEach((index) => {
-    //   console.log(index);
-    //   const { hitBox, rays } = vehicle.getInstanceHitBoxAndRay({
-    //     index,
-    //   });
-    //   drawRect(getRectVertices(hitBox))
+    Object.entries(vehicle.usedInstanceIndex).forEach(([index, { paths }]) => {
+      let { position, angleRadians } = paths[0];
+      const rect = Geometry.rec({
+        width: Vehicle.hitBox.width,
+        length: Vehicle.hitBox.length,
+        color: 0x00ff00,
+        wireframe: true,
+      });
+      rect.rotation.x = Math.PI / 2;
+      rect.rotation.z = -angleRadians;
+      rect.position.set(position.x, 0.01, position.y);
+      this.scene.add(rect);
 
-    //   rays.forEach((ray) => {
-    //     const rayVertices = verticalVertices(ray);
-    //     drawLine(rayVertices[0], rayVertices[1]);
-    //   });
-    // });
+      const head = Geometry.rec({
+        width: Vehicle.hitBox.width / 2,
+        length: Vehicle.hitBox.length / 4,
+        color: 0xffffff,
+        wireframe: true,
+      });
+      head.rotation.x = Math.PI / 2;
+      head.rotation.z = -angleRadians;
+      const { x: newX, y: newY } = rotatePointAroundCenter({
+        x: position.x,
+        y: position.y + Vehicle.hitBox.length / 2,
+        centerX: position.x,
+        centerY: position.y,
+        angleRadians: -angleRadians,
+      });
+      head.position.set(newX, 0.01, newY);
+      this.scene.add(head);
+    });
     const trafficLight = await TrafficLight.create({
       maxInstance: this.s_length * this.s_width * 4,
     });
@@ -437,6 +473,25 @@ export default class Scene {
       position: { x: 1, y: 0, z: -1 },
       intersectCount: 4,
     });
+
+    // const trafficLightHitBoxs = trafficLight.lights[`1,0,-1`].map(
+    //   (l) => l.hitBox
+    // );
+
+    // trafficLightHitBoxs.forEach(([l1,l2]) => {
+    //   this.drawLine(l1, l2);
+    // })
+
+    // const rollOverGeo = new THREE.BoxGeometry(50, 50, 50);
+    // const rollOverMaterial = new THREE.MeshBasicMaterial({
+    //   color: 0xff0000,
+    //   opacity: 0.5,
+    //   transparent: true,
+    // });
+    // const rollOverMesh = new THREE.Mesh(rollOverGeo, rollOverMaterial);
+    // this.scene.add(rollOverMesh);
+    // const gridHelper = new THREE.GridHelper(1000, 20);
+    // this.scene.add(gridHelper);
 
     const sides = 6;
     const radius = 0.133;
@@ -526,30 +581,33 @@ export default class Scene {
   };
 
   draw = () => {
-    if (this.trafficLight) {
-      this.trafficLight.update();
-    }
-    const hitBoxs = [];
+    // if (this.trafficLight) {
+    //   this.trafficLight.update();
+    // }
+    // const hitBoxs = [];
     if (this.vehicle) {
-      this.vehicle.move(this.trafficLight);
-      if (this.vehicle.getIsAvaliable()) {
-        const index = Math.floor(Math.random() * this.nodes.length);
-        this.vehicle.addPath(this.nodes[index].getRandomPath());
-      }
-      // Object.entries(this.vehicle.usedInstanceIndex).forEach(([index]) => {
-      //   const { hitBox, rays } = this.vehicle.getInstanceHitBoxAndRay({
-      //     index,
-      //   });
-      //   const lines = this.drawRect(getRectVertices(hitBox));
-      //   rays.forEach((ray) => {
-      //     const rayVertices = verticalVertices(ray);
-      //     lines.push(this.drawLine(rayVertices[0], rayVertices[1]));
-      //   });
-
-      //   setTimeout(() => {
-      //     lines.forEach((line) => this.deleteMesh(line));
-      //   }, 10);
-      // });
+      // this.vehicle.move(this.trafficLight);
+      // if (this.vehicle.getIsAvaliable()) {
+      //   const index = Math.floor(Math.random() * this.nodes.length);
+      //   this.vehicle.addPath(this.nodes[index].getRandomPath());
+      // }
+      // Object.entries(this.vehicle.usedInstanceIndex).forEach(
+      //   ([index, { paths, color }]) => {
+      //     let { position, angleRadians } = paths[0];
+      //     const { hitBox, rays } = this.vehicle.getInstanceHitBoxAndRay({
+      //       position,
+      //       angleRadians,
+      //     });
+      //     const lines = this.drawRect(getRectVertices(hitBox), color);
+      //     rays.forEach((ray) => {
+      //       const rayVertices = verticalVertices(ray);
+      //       lines.push(this.drawLine(rayVertices[0], rayVertices[1], color));
+      //     });
+      //     setTimeout(() => {
+      //       lines.forEach((line) => this.deleteMesh(line));
+      //     }, 10);
+      //   }
+      // );
     }
     // hitBoxs.forEach((lines) => lines.forEach((line) => this.deleteMesh(line)));
 
@@ -668,48 +726,37 @@ export default class Scene {
     }
   }
 
-  onSelectObject() {
-    if (this.hoverObjects.length > 0) {
-      this.handleRoadGrid();
+  onSelectObject(e) {
+    this.updateMousePosition(e);
+    const intersections = this.getIntersections();
+    if (intersections.length > 0) {
+      this.grass.highlightByInstanceIndex({
+        index: intersections[0].instanceId,
+      });
     }
+    // if (this.hoverObjects.length > 0) {
+    //   this.handleRoadGrid();
+    // }
   }
 
   onHoverObject(e) {
     this.updateMousePosition(e);
     const intersections = this.getIntersections();
-
     if (intersections.length > 0) {
-      if (this.hoverObjects.length) {
-        this.hoverObjects.forEach((c) =>
-          c?.object?.material?.emissive?.setHex(0)
-        );
-      }
-      const corner = intersections[0].object;
-      // this.hoverObjects = this.getChildrenInGrid(corner.position, Road.base);
-      this.hoverObjects = intersections;
-      // const { x, z } = corner.position;
-      // this.previewModel.updatePosition({ x, z });
-      // const colisions = this.buildings.filter((building) =>
-      //   this.previewModel.isColision(building)
-      // );
-      // this.previewModel.setIsCollision(colisions.length > 0);
-
-      this.hoverObjects.forEach((c) => {
-        c.object.material.emissive.setHex(0x555555);
+      const cornerPosition = this.grass.getInstanceMeshPosition({
+        index: intersections[0].instanceId,
       });
-      // const intersectedObject = intersections[0].object; // The closest intersected object
+      const instanceIds = this.getChildrenInGrid({
+        cornerPosition,
+        gridSize: { x: 1, z: 1 },
+      });
+      this.grass.changeInstanceColor({ indexs: instanceIds });
     } else {
-      if (this.hoverObjects.length > 0) {
-        this.hoverObjects.forEach((c) => {
-          c.object.material.emissive.setHex(0);
-        });
-        this.hoverObjects = [];
-      }
     }
   }
 
   //x is width and z is length
-  getChildrenInGrid(cornerPosition, gridSize = { x: 1, z: 1 }) {
+  getChildrenInGrid({ cornerPosition, gridSize = { x: 1, z: 1 } }) {
     const childrenInGrid = [];
 
     // Ensure cornerPosition is the top-left corner
@@ -721,25 +768,18 @@ export default class Scene {
     if (cornerZ + gridSize.z > Math.floor(this.s_length / 2)) {
       cornerZ = Math.floor(this.s_length / 2) - gridSize.z;
     }
-
-    // Traverse through all children in the scene
-    this.scene.traverse((child) => {
-      if (child.isMesh) {
-        const position = child.position;
-
-        // Check if the child's position is within the grid bounds
-        if (
-          position.x >= cornerX &&
-          position.x < cornerX + gridSize.x &&
-          position.z >= cornerZ &&
-          position.z < cornerZ + gridSize.z
-        ) {
-          childrenInGrid.push(child);
-        }
+    // Iterate over the grid and collect all positions
+    for (let z = cornerZ; z < cornerZ + gridSize.z; z++) {
+      for (let x = cornerX; x < cornerX + gridSize.x; x++) {
+        let x_Offset = Math.floor(this.s_width / 2);
+        let y_Offset = Math.floor(this.s_length / 2);
+        childrenInGrid.push(
+          Math.abs((x + x_Offset) * this.s_width + (z + y_Offset))
+        ); // Push the grid positions to the array
       }
-    });
+    }
 
-    return childrenInGrid;
+    return childrenInGrid; // Return the array of grid positions
   }
 
   updateMousePosition(e) {

@@ -27,6 +27,18 @@ export default class Geometry {
     return new THREE.Mesh(circleGeometry, circleMaterial);
   }
 
+  static rec({ width, length, color = 0x00ff00, wireframe }) {
+    // Create a 2D rectangle using PlaneGeometry
+    const geometry = new THREE.PlaneGeometry(width, length);
+
+    // Material for the rectangle
+    const material = new THREE.MeshBasicMaterial({ color, wireframe });
+
+    // Create the mesh
+    const rectangle = new THREE.Mesh(geometry, material);
+    return rectangle;
+  }
+
   static nGon({
     sides = 6,
     color = 0xd3d3d3,

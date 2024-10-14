@@ -39,4 +39,22 @@ const getRectVertices = (rect) => {
   };
 };
 
-export { getRectVertices, verticalVertices };
+const rotatePointAroundCenter = ({ x, y, centerX, centerY, angleRadians }) => {
+  // Step 1: Translate the point to the origin (relative to the center)
+  const translatedX = x - centerX;
+  const translatedY = y - centerY;
+
+  // Step 2: Apply the rotation
+  const rotatedX =
+    translatedX * Math.cos(angleRadians) - translatedY * Math.sin(angleRadians);
+  const rotatedY =
+    translatedX * Math.sin(angleRadians) + translatedY * Math.cos(angleRadians);
+
+  // Step 3: Translate the point back
+  const newX = rotatedX + centerX;
+  const newY = rotatedY + centerY;
+
+  return { x: newX, y: newY };
+};
+
+export { getRectVertices, verticalVertices, rotatePointAroundCenter };

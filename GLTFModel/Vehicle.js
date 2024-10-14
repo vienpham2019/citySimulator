@@ -7,9 +7,21 @@ import {
 import GLTF from "./GLTF.js";
 import InstanceMesh from "./InstanceMesh.js";
 import { degreesToRadians } from "../helper/index.js";
-import { getRectVertices, verticalVertices } from "../helper/vertice.js";
-import { getLineIntersection } from "../helper/intersection.js";
-
+import {
+  getRectVertices,
+  rotatePointAroundCenter,
+  verticalVertices,
+} from "../helper/vertice.js";
+import {
+  getLineIntersection,
+  isRectColliding,
+} from "../helper/intersection.js";
+import Geometry from "../Geometry.js";
+const colors = {
+  Green: 0x00ff00,
+  Yellow: 0xffff00,
+  Red: 0xff0000,
+};
 export default class Vehicle extends InstanceMesh {
   static scale = { x: 1 / 30, y: 1 / 30, z: 1 / 30 };
   static hitBox = {
@@ -30,6 +42,7 @@ export default class Vehicle extends InstanceMesh {
     this.scale = Vehicle.scale;
     this.modelUrl = "../models/vehicles/car-taxi.glb";
     this.position = { x: 0, y: 0 };
+    this.step = 10;
   }
 
   static async create({ speed = 0.01, paths = [], maxInstance }) {
@@ -67,7 +80,7 @@ export default class Vehicle extends InstanceMesh {
         {
           x,
           y,
-          length: 4 * Vehicle.scale.y,
+          length: 5 * Vehicle.scale.y,
           rotation: -angleRadians + degreesToRadians(90),
         },
         {
@@ -86,12 +99,38 @@ export default class Vehicle extends InstanceMesh {
     };
   };
 
+  getHitbox({ x, y, angleRadians }) {
+    const body = {
+      x,
+      y,
+      width: Vehicle.hitBox.width,
+      height: Vehicle.hitBox.length,
+      angle: angleRadians,
+    };
+    const { x: headX, y: headY } = rotatePointAroundCenter({
+      x,
+      y: y + Vehicle.hitBox.length / 2,
+      centerX: x,
+      centerY: y,
+      angleRadians: -angleRadians,
+    });
+    const head = {
+      x: headX,
+      y: headY,
+      width: Vehicle.hitBox.width / 2,
+      height: Vehicle.hitBox.length / 4,
+      angle: angleRadians,
+    };
+    return { head, body };
+  }
+
   getIsAvaliable() {
     return this.avalableIndex.length > 0;
   }
 
   init({ paths = [] }) {
     this.createInstanceMesh();
+
     paths.forEach((path) => this.addPath(path));
   }
 
@@ -128,19 +167,20 @@ export default class Vehicle extends InstanceMesh {
     this.usedInstanceIndex[index] = {
       speed: this.maxSpeed,
       paths,
+      color: colors.Green,
     };
     // this.usedInstanceIndex[index] = { path: uniquePath, speed: this.maxSpeed };
     // this.updateUsedInstanceIndex({ index });
     const { angleRadians, position } = this.usedInstanceIndex[index].paths[0];
-    this.updateInstanceMeshPosition({
-      position: {
-        x: position.x,
-        y: 0,
-        z: position.y,
-      },
-      angleRadians,
-      index,
-    });
+    // this.updateInstanceMeshPosition({
+    //   position: {
+    //     x: position.x,
+    //     y: 0,
+    //     z: position.y,
+    //   },
+    //   angleRadians,
+    //   index,
+    // });
   }
 
   updateUsedInstanceIndex({ index }) {
@@ -205,45 +245,62 @@ export default class Vehicle extends InstanceMesh {
     // const {
     //   position: { x: currentX, y: currentY },
     // } = this.usedInstanceIndex[index];
+    const { body: head1 } = this.getHitbox({
+      x: newX,
+      y: newY,
+      angleRadians,
+    });
     for (let targetIndex in this.usedInstanceIndex) {
       if (targetIndex === index) break;
+      // this.usedInstanceIndex[targetIndex].color = colors.Yellow;
       const {
         position: { x: targetX, y: targetY },
         angleRadians: targetAngle,
       } = this.usedInstanceIndex[targetIndex].paths[0];
-      // if (
-      //   Math.round(newX) !== Math.round(targetX) &&
-      //   Math.round(newY) !== Math.round(targetY)
-      // ) {
-      //   break;
-      // }
-      const { rays: raysVertices1, hitBox: hitBoxVertices1 } =
-        this.getHitBoxAndRaysVertices({
-          position: { x: newX, y: newY },
-          angleRadians,
-        });
-      const { hitBox: hitBoxVertices2 } = this.getHitBoxAndRaysVertices({
-        position: { x: targetX, y: targetY },
+
+      const { body: body2 } = this.getHitbox({
+        x: targetX,
+        y: targetY,
         angleRadians: targetAngle,
       });
-      if (this.checkRectangleCollision(raysVertices1, hitBoxVertices2))
+
+      if (isRectColliding(head1, body2)) {
         return true;
+      }
+
+      // const { hitBox: hitBoxVertices1, rays: raysVertices1 } =
+      //   this.getHitBoxAndRaysVertices({
+      //     position: { x: newX, y: newY },
+      //     angleRadians,
+      //   });
+      // const { hitBox: hitBoxVertices2, rays: raysVertices2 } =
+      //   this.getHitBoxAndRaysVertices({
+      //     position: { x: targetX, y: targetY },
+      //     angleRadians: targetAngle,
+      //   });
+
+      // if (
+      //   this.checkRectangleCollision(raysVertices1, hitBoxVertices2) ||
+      //   this.checkRectangleCollision(raysVertices2, hitBoxVertices1)
+      // )
+      //   return true;
     }
     return false;
   }
 
-  checkTrafficLightCollision(trafficLight, index) {
-    const {
-      position: { x: targetX, y: targetY },
-    } = this.usedInstanceIndex[index];
-
+  checkTrafficLightCollision({
+    trafficLight,
+    position: { newX, newY },
+    angleRadians,
+  }) {
     const trafficLightHitBoxs = trafficLight.getRedLightsHitBox({
-      position: { x: Math.round(targetX), y: Math.round(targetY) },
+      position: { x: Math.round(newX), y: Math.round(newY) },
     });
 
     if (!trafficLightHitBoxs) return false;
     const { rays: raysVertices1 } = this.getHitBoxAndRaysVertices({
-      index: index,
+      position: { x: newX, y: newY },
+      angleRadians,
     });
     const collition = this.checkRectangleCollision(
       raysVertices1,
@@ -254,7 +311,7 @@ export default class Vehicle extends InstanceMesh {
     return false;
   }
 
-  move(trafficLight) {
+  move() {
     if (this.avaliable === this.maxInstance) return;
     Object.entries(this.usedInstanceIndex).forEach(([index, { paths }]) => {
       if (paths.length <= 1) {
@@ -273,12 +330,15 @@ export default class Vehicle extends InstanceMesh {
       } else {
         let { position, angleRadians, distanceToNextNode, speedOffset } =
           paths[0];
-        // if (
-        //   trafficLight &&
-        //   this.checkTrafficLightCollision(trafficLight, index)
-        // ) {
-        //   return;
-        // }
+        if (
+          this.checkCollision({
+            index,
+            position: { newX: position.x, newY: position.y },
+            angleRadians,
+          })
+        ) {
+          return;
+        }
 
         const distanceDiff = calculateHypotenuse(
           speedOffset.speedX,
@@ -290,10 +350,11 @@ export default class Vehicle extends InstanceMesh {
         let newY = position.y + speedOffset.speedY;
 
         if (newDistanceToNextNode <= 0) {
-          this.usedInstanceIndex[index].paths.shift();
+          const path = this.usedInstanceIndex[index].paths.shift();
           const { angleRadians: newAngleRadians, position: newPosition } =
             this.usedInstanceIndex[index].paths[0];
           angleRadians = newAngleRadians;
+
           newX = newPosition.x;
           newY = newPosition.y;
           if (
@@ -303,6 +364,7 @@ export default class Vehicle extends InstanceMesh {
               angleRadians,
             })
           ) {
+            this.usedInstanceIndex[index].paths.unshift(path);
             return;
           }
         } else {
@@ -315,6 +377,7 @@ export default class Vehicle extends InstanceMesh {
           ) {
             return;
           }
+
           this.usedInstanceIndex[index].paths[0].distanceToNextNode =
             newDistanceToNextNode;
           this.usedInstanceIndex[index].paths[0].position = {
@@ -322,7 +385,6 @@ export default class Vehicle extends InstanceMesh {
             y: newY,
           };
         }
-
         this.updateInstanceMeshPosition({
           position: {
             x: newX,

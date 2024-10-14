@@ -27,16 +27,24 @@ document.body.addEventListener(
   "mousedown",
   (event) => {
     // Left mouse
-    // if (event.button === 0) myScene.onSelectObject(event);
+    if (event.button === 0) myScene.onSelectObject(event);
   },
   false
 );
 
+function debounce(func, delay) {
+  let timer;
+  return function (...args) {
+    clearTimeout(timer);
+    timer = setTimeout(() => func.apply(this, args), delay);
+  };
+}
+
 document.body.addEventListener(
   "mousemove",
-  (event) => {
-    // myScene.onHoverObject(event);
-  },
+  debounce((event) => {
+    myScene.onHoverObject(event);
+  }, 1),
   false
 );
 

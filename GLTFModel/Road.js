@@ -30,7 +30,9 @@ export default class Road extends GLTF {
     });
     obj.position = position;
     obj.mesh.name = isPreview ? "Preview Road" : name;
-
+    obj.instanceMesh.children.forEach((instanceMesh) => {
+      obj.setInstanceMeshObjColor({ instanceMesh, index: 1 });
+    });
     return obj;
   }
 

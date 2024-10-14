@@ -136,26 +136,26 @@ export default class TrafficLight extends InstanceMesh {
       if (d === "top") {
         light.type = "red";
         light.hitBox = verticalVertices({
-          x: position.x + 0.01,
+          x: position.x + 0.05,
           y: position.z + 0.35,
           rotation: 0,
-          length: 0.2,
+          length: 0.15,
         });
       } else if (d === "right") {
         light.type = "green";
         light.hitBox = verticalVertices({
           x: position.x - 0.35,
-          y: position.z,
+          y: position.z + 0.05,
           rotation: Math.PI / 2,
-          length: 0.2,
+          length: 0.15,
         });
       } else if (d === "bottom") {
         light.type = "red";
         light.hitBox = verticalVertices({
-          x: position.x - 0.21,
+          x: position.x - 0.2,
           y: position.z - 0.35,
           rotation: 0,
-          length: 0.2,
+          length: 0.15,
         });
       } else if (d === "left") {
         light.type = "green";
@@ -163,7 +163,7 @@ export default class TrafficLight extends InstanceMesh {
           x: position.x + 0.35,
           y: position.z - 0.21,
           rotation: Math.PI / 2,
-          length: 0.2,
+          length: 0.15,
         });
       }
       lights.push(light);

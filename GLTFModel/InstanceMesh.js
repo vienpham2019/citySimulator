@@ -1,5 +1,7 @@
 import * as THREE from "three";
 import { rotateVector } from "../helper/point.js";
+const color = new THREE.Color();
+
 export default class InstanceMesh {
   constructor() {
     this.instanceMesh = new THREE.Group();
@@ -20,6 +22,15 @@ export default class InstanceMesh {
       this.maxInstance // Maximum number of instances
     );
 
+    // // Create an empty buffer for color data (4 components per instance: R, G, B, A)
+    // const colors = new Float32Array(this.maxInstance * 4); // RGBA values
+
+    // // Create an InstancedBufferAttribute and attach it to the geometry
+    // instanceMesh.geometry.setAttribute(
+    //   "color",
+    //   new THREE.InstancedBufferAttribute(colors, 4)
+    // );
+
     const matrix = new THREE.Matrix4();
     const { x: scaleX, y: scaleY, z: scaleZ } = this.scale;
 
@@ -37,6 +48,7 @@ export default class InstanceMesh {
     );
     for (let i = 0; i < instanceMesh.count; i++) {
       instanceMesh.setMatrixAt(i, matrix);
+      instanceMesh.setColorAt(i, color.setHex(0xffffff));
     }
     return instanceMesh;
   }
@@ -74,7 +86,6 @@ export default class InstanceMesh {
   }
 
   setInstanceMeshObjPosition({ position, index, instanceMesh, angleRadians }) {
-    instanceMesh.instanceMatrix.needsUpdate = true;
     const matrix = new THREE.Matrix4();
 
     // Extract the existing scale from the matrix
@@ -98,5 +109,28 @@ export default class InstanceMesh {
 
     // Set the matrix at a specific index to make that instance visible
     instanceMesh.setMatrixAt(index, matrix);
+    instanceMesh.instanceMatrix.needsUpdate = true;
+  }
+
+  getInstanceMeshPosition({ index }) {
+    const matrix = new THREE.Matrix4();
+    const position = new THREE.Vector3();
+    const quaternion = new THREE.Quaternion();
+    const scale = new THREE.Vector3();
+    for (let instanceMesh of this.instanceMesh.children) {
+      console.log(instanceMesh);
+      instanceMesh.getMatrixAt(index, matrix);
+      matrix.decompose(position, quaternion, scale);
+
+      return position;
+    }
+  }
+
+  hightlightInstanceMeshObj({ index, color = 0xff0000 }) {
+    this.instanceMesh.children.forEach((instanceMesh) => {
+      instanceMesh.instanceMatrix.needsUpdate = true;
+      const colorVector = new THREE.Color(color);
+      instanceMesh.setColorAt(index, colorVector);
+    });
   }
 }
