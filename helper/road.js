@@ -299,7 +299,6 @@ const handleSetSymbol = async ({
         roadVal[0] = "M";
         roadVal[2] = "M";
       }
-      console.log("selfJoin horizontal", roadVal, isTopNormal);
     } else if (isTop && isBottom && roadVal[0] !== roadVal[2]) {
       if (isLeft) roadVal[1] = roadVal[3];
       else if (isRight) roadVal[3] = roadVal[1];

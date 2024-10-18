@@ -21,7 +21,7 @@ export default class InstanceMesh {
       mesh.material, // Material from the loaded mesh
       this.maxInstance // Maximum number of instances
     );
-
+    instanceMesh.instanceMatrix.needsUpdate = true;
     const matrix = new THREE.Matrix4();
     const { x: scaleX, y: scaleY, z: scaleZ } = this.scale;
 
@@ -77,6 +77,7 @@ export default class InstanceMesh {
   }
 
   setInstanceMeshObjPosition({ position, index, instanceMesh, angleRadians }) {
+    instanceMesh.instanceMatrix.needsUpdate = true;
     const matrix = new THREE.Matrix4();
 
     // Extract the existing scale from the matrix
@@ -100,7 +101,6 @@ export default class InstanceMesh {
 
     // Set the matrix at a specific index to make that instance visible
     instanceMesh.setMatrixAt(index, matrix);
-    instanceMesh.instanceMatrix.needsUpdate = true;
   }
 
   getInstanceMeshPosition({ index }) {
@@ -109,7 +109,6 @@ export default class InstanceMesh {
     const quaternion = new THREE.Quaternion();
     const scale = new THREE.Vector3();
     for (let instanceMesh of this.instanceMesh.children) {
-      console.log(instanceMesh);
       instanceMesh.getMatrixAt(index, matrix);
       matrix.decompose(position, quaternion, scale);
 

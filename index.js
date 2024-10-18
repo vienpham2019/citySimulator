@@ -16,10 +16,16 @@ import Scene from "./sence.js";
 const width = 20;
 const length = 20;
 const myScene = new Scene({ width, length });
-myScene.init({ width, length });
 new OrbitControls(myScene.camera, myScene.renderer.domElement);
-
-window.onload = () => {
+function debounce(func, delay) {
+  let timer;
+  return function (...args) {
+    clearTimeout(timer);
+    timer = setTimeout(() => func.apply(this, args), delay);
+  };
+}
+window.onload = async () => {
+  await myScene.init({ width, length });
   myScene.start();
 };
 
@@ -31,14 +37,6 @@ document.body.addEventListener(
   },
   false
 );
-
-function debounce(func, delay) {
-  let timer;
-  return function (...args) {
-    clearTimeout(timer);
-    timer = setTimeout(() => func.apply(this, args), delay);
-  };
-}
 
 document.body.addEventListener(
   "mousemove",

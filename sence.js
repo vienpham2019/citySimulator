@@ -56,8 +56,7 @@ export default class Scene {
     this.mouse = new THREE.Vector2();
 
     // Append renderer to the DOM
-    this.roadsMesh = {};
-    this.roadGrids = [];
+    this.roadGrids = {};
     this.nodes = [];
     this.setupLights({ width, length });
     this.setUpPlatform({ width, length });
@@ -69,13 +68,14 @@ export default class Scene {
     this.deleteVehicleIds = [];
     this.instanceObjs = {};
     this.platformGrids = [];
+    this.selectInstanceIds = null;
   }
 
   async init({ width, length }) {
     const roads = await Road.create({ maxInstance: width * length });
-    this.roads = roads;
-    Object.entries(roads).forEach(([_, roadObj]) => {
+    Object.entries(roads).forEach(([keys, roadObj]) => {
       this.scene.add(roadObj.instanceMesh);
+      this.instanceObjs[keys] = roadObj;
     });
   }
   getPositionOfPlatformIndex({ index }) {
@@ -205,18 +205,18 @@ export default class Scene {
         },
       })
     );
-    for (let x = 0; x < width; x++) {
-      this.roadGrids[x] = [];
-      for (let y = 0; y < length; y++) {
-        let x_pos = x - Math.floor(width / 2);
-        let y_pos = y - Math.floor(length / 2);
+    for (let row = 0; row < length; row++) {
+      for (let col = 0; col < width; col++) {
+        const index = row * length + col;
+        const x_pos = col - Math.floor(width / 2);
+        const y_pos = row - Math.floor(length / 2);
         this.platformGrids.push(insObjKeys.Grass);
         this.instanceObjs[insObjKeys.Grass].updateInstanceMeshPosition({
           position: { x: x_pos, y: y_pos },
-          index: x * width + y,
+          index,
         });
 
-        this.roadGrids[x][y] = [" ", ["", "", "", ""]];
+        // this.roadGrids[x][y] = [" ", ["", "", "", ""]];
       }
     }
 
@@ -522,6 +522,7 @@ export default class Scene {
         // );
       });
     }
+
     this.trafficLight = trafficLight;
     this.scene.add(trafficLight.instanceMesh);
     this.scene.add(vehicle.instanceMesh);
@@ -726,15 +727,38 @@ export default class Scene {
       mesh = null;
     }
   }
+  calculateIndexByPosition({ position }) {
+    const x_Offset = Math.floor(this.s_width / 2);
+    const y_Offset = Math.floor(this.s_length / 2);
 
-  onSelectObject(e) {
-    this.updateMousePosition(e);
-    const intersections = this.getIntersections();
-    if (intersections.length > 0) {
-      this.instanceObjs[insObjKeys.Grass].highlightByInstanceIndex({
-        index: intersections[0].instanceId,
+    return Math.abs(
+      position.x + x_Offset + (position.y + y_Offset) * this.s_width
+    );
+  }
+  onSelectObject() {
+    if (!this.selectInstanceIds) return;
+    this.selectInstanceIds.forEach(([instanceId, position]) => {
+      const targetInstanceVal = this.platformGrids[instanceId];
+      Road.addRoad({
+        index: instanceId,
+        position,
+        roadGrids: this.roadGrids,
+        platformGrids: this.platformGrids,
+        s_length: this.s_length,
+        s_width: this.s_width,
+        instanceObjs: this.instanceObjs,
       });
-    }
+      // this.instanceObjs[targetInstanceVal].updateInstanceMeshPosition({
+      //   position: { x: 1e10, y: 1e10 },
+      //   index: instanceId,
+      // });
+
+      // this.instanceObjs[insObjKeys.Road_Straight].updateInstanceMeshPosition({
+      //   position,
+      //   index: instanceId,
+      // });
+    });
+    this.selectInstanceIds = null;
   }
 
   onHoverObject(e) {
@@ -751,8 +775,9 @@ export default class Scene {
         cornerPosition,
         gridSize: { x: 1, z: 1 },
       });
+      this.selectInstanceIds = instanceIds;
       this.instanceObjs[insObjKeys.Grass].changeInstanceColor({
-        indexs: instanceIds,
+        indexs: instanceIds.map((inc) => inc[0]),
       });
     }
   }
@@ -771,13 +796,13 @@ export default class Scene {
       cornerZ = Math.floor(this.s_length / 2) - gridSize.z;
     }
     // Iterate over the grid and collect all positions
-    for (let z = cornerZ; z < cornerZ + gridSize.z; z++) {
-      for (let x = cornerX; x < cornerX + gridSize.x; x++) {
-        let x_Offset = Math.floor(this.s_width / 2);
-        let y_Offset = Math.floor(this.s_length / 2);
-        childrenInGrid.push(
-          Math.abs((x + x_Offset) * this.s_width + (z + y_Offset))
-        ); // Push the grid positions to the array
+    for (let x = cornerX; x < cornerX + gridSize.x; x++) {
+      for (let z = cornerZ; z < cornerZ + gridSize.z; z++) {
+        const position = { x, y: z };
+        childrenInGrid.push([
+          this.calculateIndexByPosition({ position }),
+          position,
+        ]); // Push the grid positions to the array
       }
     }
 

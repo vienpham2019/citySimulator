@@ -78,7 +78,7 @@ export default class Grass extends InstanceMesh {
     this.prevHilightIndexs = [];
   }
 
-  updateInstanceMeshPosition({ position, index }) {
+  updateInstanceMeshPosition({ position, index, angleRadians = 0 }) {
     super.updateInstanceMeshPosition({
       position: {
         x: position.x,
@@ -86,6 +86,7 @@ export default class Grass extends InstanceMesh {
         z: position.y,
       },
       index,
+      angleRadians,
     });
   }
 }
