@@ -40,6 +40,7 @@ const setPointPosition = ({ position, index, instanceMesh }) => {
 };
 
 const setInstanceMeshObjPosition = ({ position, index, instanceMesh }) => {
+  instanceMesh.instanceMatrix.needsUpdate = true;
   const matrix = new THREE.Matrix4();
   // Example position for an instance
   instanceMesh.getMatrixAt(index, matrix);
@@ -71,6 +72,7 @@ const setArrowPosition = ({
   angleDeg,
   length,
 }) => {
+  instanceMesh.instanceMatrix.needsUpdate = true;
   const arrowMatrix = new THREE.Matrix4();
   // Convert angles to radians
   const yRotationAngle = THREE.MathUtils.degToRad(-angleDeg);

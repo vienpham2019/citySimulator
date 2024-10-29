@@ -1,4 +1,5 @@
 import { insObjKeys } from "../enum/sence.js";
+import { straightNode } from "../node/straightNode.js";
 import GLTF from "./GLTF.js";
 import InstanceMesh from "./InstanceMesh.js";
 
@@ -142,6 +143,7 @@ export default class Road extends InstanceMesh {
     s_width,
     s_length,
     instanceObjs,
+    nodes,
   }) {
     const { isSelfRoad, isTopRoad, isRightRoad, isBottomRoad, isLeftRoad } =
       Road.getRoadNeightbor({
@@ -211,6 +213,11 @@ export default class Road extends InstanceMesh {
     if (!isSelfRoad) {
       roadGrids[index] = ["M", "-", "M", "-"];
       platformGrids[index] = insObjKeys.Road_Straight;
+      nodes[`${position.x}${position.y}`] = straightNode({
+        isIntersect: true,
+        isVertical: true,
+        position,
+      });
       Road.updatePlatformRoad({
         instanceObjs,
         instanceId: index,
@@ -228,7 +235,7 @@ export default class Road extends InstanceMesh {
         intersects: countIntersect(position),
       });
     }
-    console.log(executeRoad);
+
     if (executeRoad.length > 1) {
       executeRoad.sort((a, b) => (a.intersects - b.intersects ? -1 : 1));
       executeRoad.forEach(({ position }) => {
@@ -239,6 +246,7 @@ export default class Road extends InstanceMesh {
           s_width,
           s_length,
           instanceObjs,
+          nodes,
         });
       });
     }
@@ -251,6 +259,7 @@ export default class Road extends InstanceMesh {
     s_width,
     s_length,
     instanceObjs,
+    nodes,
   }) {
     const {
       self,
@@ -300,7 +309,7 @@ export default class Road extends InstanceMesh {
 
     let angleRadians = 0;
     let roadKey = insObjKeys.Road_Straight;
-
+    let node;
     const isRoad = (index) => roadVal[index] !== "-";
     if (roadCount === 4) {
       roadKey = insObjKeys.Road_Intersect;
@@ -311,7 +320,20 @@ export default class Road extends InstanceMesh {
       else if (!isRoad(3)) angleRadians = Math.PI / 2;
     } else {
       // Vertical straight road
-      if (isRoad(1) && isRoad(3)) angleRadians = Math.PI / 2;
+      if (isRoad(1) && isRoad(3)) {
+        angleRadians = Math.PI / 2;
+        node = straightNode({
+          isIntersect: true,
+          isVertical: false,
+          position,
+        });
+      } else if (isRoad(0) && isRoad(2)) {
+        node = straightNode({
+          isIntersect: true,
+          isVertical: true,
+          position,
+        });
+      }
 
       // Curve road
       if ((isRoad(0) || isRoad(2)) && (isRoad(1) || isRoad(3))) {
@@ -321,6 +343,8 @@ export default class Road extends InstanceMesh {
         else if (isRoad(0) && isRoad(3)) angleRadians = Math.PI;
       }
     }
+
+    nodes[`${position.x}${position.y}`] = node;
 
     roadGrids[selfIndex] = roadVal;
     Road.updatePlatformRoad({

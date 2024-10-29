@@ -35,6 +35,7 @@ import TrafficLight from "./GLTFModel/TrafficLight.js";
 const w = window.innerWidth;
 const h = window.innerHeight;
 import { insObjKeys } from "./enum/sence.js";
+import Point from "./GLTFModel/Point.js";
 
 export default class Scene {
   constructor({ width = 10, length = 10 }) {
@@ -57,7 +58,7 @@ export default class Scene {
 
     // Append renderer to the DOM
     this.roadGrids = {};
-    this.nodes = [];
+    this.nodes = {};
     this.setupLights({ width, length });
     this.setUpPlatform({ width, length });
     this.buildingsToGrow = [];
@@ -94,14 +95,13 @@ export default class Scene {
     if (!node) {
       return; // Skip processing if node is already processed
     }
+
     if (
       node.isEndNode() &&
       !processedNodes.has(`End:${nodeposition.x},${nodeposition.y}`)
     ) {
-      setPointPosition({
+      this.instanceObjs[insObjKeys.End_Point].addInstanceToSence({
         position: nodeposition,
-        index: this.endPointIndex++,
-        instanceMesh: this.endPointInstancedMesh,
       });
 
       processedNodes.add(`End:${nodeposition.x},${nodeposition.y}`);
@@ -110,10 +110,8 @@ export default class Scene {
       node.isRootNode() &&
       !processedNodes.has(`Root:${nodeposition.x},${nodeposition.y}`)
     ) {
-      setPointPosition({
+      this.instanceObjs[insObjKeys.Start_Point].addInstanceToSence({
         position: nodeposition,
-        index: this.startPointIndex++,
-        instanceMesh: this.startPointInstancedMesh,
       });
 
       processedNodes.add(`Root:${nodeposition.x},${nodeposition.y}`);
@@ -134,10 +132,8 @@ export default class Scene {
       });
       // Point
       if (!child.isEndNode()) {
-        setPointPosition({
+        this.instanceObjs[insObjKeys.Point].addInstanceToSence({
           position: childposition,
-          index: this.pointIndex++,
-          instanceMesh: this.pointInstancedMesh,
         });
       }
       // Arrow
@@ -373,34 +369,45 @@ export default class Scene {
       });
       return Array.from(roots).filter((n) => n.isParent);
     };
-    this.nodes = joinNodesGrid();
+    // this.nodes = joinNodesGrid();
 
     // Add the InstancedMesh to the scene
-    const { instanceMesh: pointInstancedMesh, index: pointIndex } =
-      createPointInstanceMesh({ maxCount: 1000 });
-    this.pointIndex = pointIndex;
-    this.pointInstancedMesh = pointInstancedMesh;
-    this.scene.add(pointInstancedMesh);
+    this.instanceObjs[insObjKeys.Point] = await Point.create({
+      maxInstance: 1000,
+      color: "White",
+    });
+    this.instanceObjs[insObjKeys.End_Point] = await Point.create({
+      maxInstance: 100,
+      color: "Red",
+    });
+    this.instanceObjs[insObjKeys.Start_Point] = await Point.create({
+      maxInstance: 100,
+      color: "Green",
+    });
 
-    const { instanceMesh: endPointInstancedMesh, index: endPointIndex } =
-      createPointInstanceMesh({ color: 0xff0000 });
-    this.endPointIndex = endPointIndex;
-    this.endPointInstancedMesh = endPointInstancedMesh;
-    this.scene.add(endPointInstancedMesh);
-
-    const { instanceMesh: startPointInstancedMesh, index: startPointIndex } =
-      createPointInstanceMesh({ color: 0x00ff00 });
-    this.startPointIndex = startPointIndex;
-    this.startPointInstancedMesh = startPointInstancedMesh;
-    this.scene.add(startPointInstancedMesh);
-
+    this.scene.add(this.instanceObjs[insObjKeys.Point].instanceMesh);
+    this.scene.add(this.instanceObjs[insObjKeys.End_Point].instanceMesh);
+    this.scene.add(this.instanceObjs[insObjKeys.Start_Point].instanceMesh);
+    console.log(this.instanceObjs);
     const { instanceMesh: arrowInstancedMesh, index: arrowIndex } =
       createArrowInstanceMesh({ maxCount: 1000 });
     this.arrowIndex = arrowIndex;
     this.arrowInstancedMesh = arrowInstancedMesh;
+
+    setArrowPosition({
+      position: {
+        x: 1,
+        y: -0.3,
+        z: 1,
+      },
+      index: this.arrowIndex++,
+      instanceMesh: this.arrowInstancedMesh,
+      angleDeg: 0,
+      length: 0.2,
+    });
     this.scene.add(arrowInstancedMesh);
 
-    const processedNodes = new Set();
+    // const processedNodes = new Set();
     // this.nodes.forEach((n) => {
     //   this.printNodeAndChildren({
     //     color: "Green",
@@ -410,13 +417,13 @@ export default class Scene {
     //   });
     // });
 
-    let paths = [];
-    Array.from({ length: 10 }).forEach((_, i) => {
-      // const index = Math.floor(Math.random() * this.nodes.length);
-      paths.push(this.nodes[i].getRandomPath());
-    });
-    const vehicle = await Vehicle.create({ maxInstance: 10, paths });
-    this.vehicle = vehicle;
+    // let paths = [];
+    // Array.from({ length: 10 }).forEach((_, i) => {
+    //   // const index = Math.floor(Math.random() * this.nodes.length);
+    //   paths.push(this.nodes[i].getRandomPath());
+    // });
+    // const vehicle = await Vehicle.create({ maxInstance: 10, paths });
+    // this.vehicle = vehicle;
 
     // const drawDot = ({ x, y }, color = 0x808080) => {
     //   const vertices = new Float32Array([x, 0.1, y]); // Dot at (0, 0, 0)
@@ -436,44 +443,44 @@ export default class Scene {
     //   this.scene.add(dot);
     // };
 
-    Object.entries(vehicle.usedInstanceIndex).forEach(([index, { paths }]) => {
-      let { position, angleRadians } = paths[0];
-      const rect = Geometry.rec({
-        width: Vehicle.hitBox.width,
-        length: Vehicle.hitBox.length,
-        color: 0x00ff00,
-        wireframe: true,
-      });
-      rect.rotation.x = Math.PI / 2;
-      rect.rotation.z = -angleRadians;
-      rect.position.set(position.x, 0.01, position.y);
-      this.scene.add(rect);
+    // Object.entries(vehicle.usedInstanceIndex).forEach(([index, { paths }]) => {
+    //   let { position, angleRadians } = paths[0];
+    //   const rect = Geometry.rec({
+    //     width: Vehicle.hitBox.width,
+    //     length: Vehicle.hitBox.length,
+    //     color: 0x00ff00,
+    //     wireframe: true,
+    //   });
+    //   rect.rotation.x = Math.PI / 2;
+    //   rect.rotation.z = -angleRadians;
+    //   rect.position.set(position.x, 0.01, position.y);
+    //   this.scene.add(rect);
 
-      const head = Geometry.rec({
-        width: Vehicle.hitBox.width / 2,
-        length: Vehicle.hitBox.length / 4,
-        color: 0xffffff,
-        wireframe: true,
-      });
-      head.rotation.x = Math.PI / 2;
-      head.rotation.z = -angleRadians;
-      const { x: newX, y: newY } = rotatePointAroundCenter({
-        x: position.x,
-        y: position.y + Vehicle.hitBox.length / 2,
-        centerX: position.x,
-        centerY: position.y,
-        angleRadians: -angleRadians,
-      });
-      head.position.set(newX, 0.01, newY);
-      this.scene.add(head);
-    });
-    const trafficLight = await TrafficLight.create({
-      maxInstance: this.s_length * this.s_width * 4,
-    });
-    trafficLight.createIntersectLight({
-      position: { x: 1, y: 0, z: -1 },
-      intersectCount: 4,
-    });
+    //   const head = Geometry.rec({
+    //     width: Vehicle.hitBox.width / 2,
+    //     length: Vehicle.hitBox.length / 4,
+    //     color: 0xffffff,
+    //     wireframe: true,
+    //   });
+    //   head.rotation.x = Math.PI / 2;
+    //   head.rotation.z = -angleRadians;
+    //   const { x: newX, y: newY } = rotatePointAroundCenter({
+    //     x: position.x,
+    //     y: position.y + Vehicle.hitBox.length / 2,
+    //     centerX: position.x,
+    //     centerY: position.y,
+    //     angleRadians: -angleRadians,
+    //   });
+    //   head.position.set(newX, 0.01, newY);
+    //   this.scene.add(head);
+    // });
+    // const trafficLight = await TrafficLight.create({
+    //   maxInstance: this.s_length * this.s_width * 4,
+    // });
+    // trafficLight.createIntersectLight({
+    //   position: { x: 1, y: 0, z: -1 },
+    //   intersectCount: 4,
+    // });
 
     // const trafficLightHitBoxs = trafficLight.lights[`1,0,-1`].map(
     //   (l) => l.hitBox
@@ -509,23 +516,23 @@ export default class Scene {
         { x: 0, y: 3.16, z: 0.251, color: 0x00ff00 },
       ],
     };
-    for (let key in lightsOffset) {
-      lightsOffset[key].forEach(({ x, y, z, color }) => {
-        // this.scene.add(
-        //   Geometry.nGon({
-        //     sides,
-        //     radius,
-        //     color,
-        //     position: { x, y, z },
-        //     rotation,
-        //   })
-        // );
-      });
-    }
+    // for (let key in lightsOffset) {
+    //   lightsOffset[key].forEach(({ x, y, z, color }) => {
+    //     // this.scene.add(
+    //     //   Geometry.nGon({
+    //     //     sides,
+    //     //     radius,
+    //     //     color,
+    //     //     position: { x, y, z },
+    //     //     rotation,
+    //     //   })
+    //     // );
+    //   });
+    // }
 
-    this.trafficLight = trafficLight;
-    this.scene.add(trafficLight.instanceMesh);
-    this.scene.add(vehicle.instanceMesh);
+    // this.trafficLight = trafficLight;
+    // this.scene.add(trafficLight.instanceMesh);
+    // this.scene.add(vehicle.instanceMesh);
   }
 
   setupLights({ width, length }) {
@@ -747,6 +754,72 @@ export default class Scene {
         s_length: this.s_length,
         s_width: this.s_width,
         instanceObjs: this.instanceObjs,
+        nodes: this.nodes,
+      });
+      const joinNodes = (n1, n2, direction) => {
+        if (direction === "Right" && n2.left && n1.right) {
+          n2.left[0].connectToRootNode(n1.right[0]);
+          n2.left[1].connectToRootNode(n1.right[1]);
+          n1.right[2].connectToEndNode(n2.left[2]);
+          n1.right[3].connectToEndNode(n2.left[3]);
+        } else if (direction === "Left" && n1.left && n2.right) {
+          n1.left[0].connectToRootNode(n2.right[0]);
+          n1.left[1].connectToRootNode(n2.right[1]);
+          n2.right[2].connectToEndNode(n1.left[2]);
+          n2.right[3].connectToEndNode(n1.left[3]);
+        } else if (direction === "Bottom" && n1.bottom && n2.top) {
+          n1.bottom[0].connectToRootNode(n2.top[0]);
+          n1.bottom[1].connectToRootNode(n2.top[1]);
+          n2.top[2].connectToEndNode(n1.bottom[2]);
+          n2.top[3].connectToEndNode(n1.bottom[3]);
+        } else if (direction === "Top" && n2.bottom && n1.top) {
+          n2.bottom[0].connectToRootNode(n1.top[0]);
+          n2.bottom[1].connectToRootNode(n1.top[1]);
+          n1.top[2].connectToEndNode(n2.bottom[2]);
+          n1.top[3].connectToEndNode(n2.bottom[3]);
+        }
+      };
+      const joinNodesGrid = () => {
+        const roots = new Set();
+        Object.entries(this.nodes).map(([, value]) => {
+          const { x, y } = value.position;
+          const top = this.nodes[`${x}${y - 1}`];
+          const right = this.nodes[`${x + 1}${y}`];
+          const bottom = this.nodes[`${x}${y + 1}`];
+          const left = this.nodes[`${x - 1}${y}`];
+          if (left && !left.isJoinRight && !value.isJoinLeft) {
+            left.isJoinRight = true;
+            value.isJoinLeft = true;
+            joinNodes(value, left, "Left");
+          }
+          if (right && !right.isJoinLeft && !value.isJoinRight) {
+            right.isJoinLeft = true;
+            value.isJoinRight = true;
+            joinNodes(value, right, "Right");
+          }
+          if (top && !top.isJoinBottom && !value.isJoinTop) {
+            top.isJoinBottom = true;
+            value.isJoinTop = true;
+            joinNodes(value, top, "Top");
+          }
+          if (bottom && !bottom.isJoinTop && !value.isJoinBottom) {
+            bottom.isJoinTop = true;
+            value.isJoinBottom = true;
+            joinNodes(value, bottom, "Bottom");
+          }
+          value.roots.forEach((root) => roots.add(root));
+        });
+        return Array.from(roots).filter((n) => n.isParent);
+      };
+      const jointedNodes = joinNodesGrid();
+      const processedNodes = new Set();
+      jointedNodes.forEach((n) => {
+        this.printNodeAndChildren({
+          color: "Green",
+          node: n,
+          vehicleId: "vehicle.id",
+          processedNodes,
+        });
       });
       // this.instanceObjs[targetInstanceVal].updateInstanceMeshPosition({
       //   position: { x: 1e10, y: 1e10 },
