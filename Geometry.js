@@ -83,7 +83,7 @@ export default class Geometry {
     color = 0xd3d3d3,
     width = 1,
     radius = 1,
-    wireframe = false,
+    wireframe = true,
   }) {
     const geometry = new THREE.SphereGeometry(radius, width, height);
     const material = new THREE.MeshBasicMaterial({ color, wireframe });

@@ -95,58 +95,67 @@ export default class Scene {
     if (!node) {
       return; // Skip processing if node is already processed
     }
+    const strPointPos = ({ x, y }) => `${x},${y}`;
+    const strArrowPos = (p1, p2) => `${p1.x},${p1.y}->${p2.x},${p2.y}`;
+    // if (
+    //   node.isEndNode() &&
+    //   !processedNodes.has(`End:${nodeposition.x},${nodeposition.y}`)
+    // ) {
+    //   this.instanceObjs[insObjKeys.Point].addInstanceToSence({
+    //     position: nodeposition,
+    //   });
 
-    if (
-      node.isEndNode() &&
-      !processedNodes.has(`End:${nodeposition.x},${nodeposition.y}`)
-    ) {
-      this.instanceObjs[insObjKeys.End_Point].addInstanceToSence({
+    //   processedNodes.add(`End:${nodeposition.x},${nodeposition.y}`);
+    // }
+    if (node.isRootNode() && !processedNodes.has(strPointPos(nodeposition))) {
+      this.instanceObjs[insObjKeys.Point].addInstanceToSence({
         position: nodeposition,
+        strColor: "Green",
       });
-
-      processedNodes.add(`End:${nodeposition.x},${nodeposition.y}`);
-    }
-    if (
-      node.isRootNode() &&
-      !processedNodes.has(`Root:${nodeposition.x},${nodeposition.y}`)
-    ) {
-      this.instanceObjs[insObjKeys.Start_Point].addInstanceToSence({
-        position: nodeposition,
-      });
-
-      processedNodes.add(`Root:${nodeposition.x},${nodeposition.y}`);
+      processedNodes.add(strPointPos(nodeposition));
     }
 
     node.children.forEach((child) => {
       const { position: childposition } = child;
-      if (
-        processedNodes.has(
-          `${nodeposition.x}->${childposition.x},${nodeposition.y}->${childposition.y}`
-        )
-      ) {
-        return;
+      if (processedNodes.has(strArrowPos(nodeposition, childposition))) return;
+
+      if (!processedNodes.has(strPointPos(childposition))) {
+        if (
+          Math.abs(
+            nodeposition.x +
+              nodeposition.y -
+              (childposition.x + childposition.y)
+          ) > 0.2
+        ) {
+          this.instanceObjs[insObjKeys.Point].addInstanceToSence({
+            position: childposition,
+            strColor: child.isEndNode() ? "Red" : "White",
+          });
+          processedNodes.add(strPointPos(childposition));
+        }
       }
-      const { length, angleDeg } = calculateDistanceAndAngle({
-        position1: nodeposition,
-        position2: childposition,
-      });
+      // const { length, angleDeg } = calculateDistanceAndAngle({
+      //   position1: nodeposition,
+      //   position2: childposition,
+      // });
       // Point
-      if (!child.isEndNode()) {
-        this.instanceObjs[insObjKeys.Point].addInstanceToSence({
-          position: childposition,
-        });
-      }
+      // if (!child.isEndNode()) {
+      //   this.instanceObjs[insObjKeys.Point].addInstanceToSence({
+      //     position: childposition,
+      //   });
+      // }
+      // this.instanceObjs[insObjKeys.Point].addInstanceToSence({
+      //   position: childposition,
+      // });
       // Arrow
-      setArrowPosition({
-        position: childposition,
-        index: this.arrowIndex++,
-        instanceMesh: this.arrowInstancedMesh,
-        angleDeg,
-        length,
-      });
-      processedNodes.add(
-        `${nodeposition.x}->${childposition.x},${nodeposition.y}->${childposition.y}`
-      );
+      // setArrowPosition({
+      //   position: childposition,
+      //   index: this.arrowIndex++,
+      //   instanceMesh: this.arrowInstancedMesh,
+      //   angleDeg,
+      //   length,
+      // });
+      processedNodes.add(strArrowPos(nodeposition, childposition));
       this.printNodeAndChildren({
         node: child,
         vehicleId,
@@ -373,22 +382,11 @@ export default class Scene {
 
     // Add the InstancedMesh to the scene
     this.instanceObjs[insObjKeys.Point] = await Point.create({
-      maxInstance: 1000,
+      maxInstance: 9000,
       color: "White",
-    });
-    this.instanceObjs[insObjKeys.End_Point] = await Point.create({
-      maxInstance: 100,
-      color: "Red",
-    });
-    this.instanceObjs[insObjKeys.Start_Point] = await Point.create({
-      maxInstance: 100,
-      color: "Green",
     });
 
     this.scene.add(this.instanceObjs[insObjKeys.Point].instanceMesh);
-    this.scene.add(this.instanceObjs[insObjKeys.End_Point].instanceMesh);
-    this.scene.add(this.instanceObjs[insObjKeys.Start_Point].instanceMesh);
-    console.log(this.instanceObjs);
     const { instanceMesh: arrowInstancedMesh, index: arrowIndex } =
       createArrowInstanceMesh({ maxCount: 1000 });
     this.arrowIndex = arrowIndex;
@@ -812,15 +810,17 @@ export default class Scene {
         return Array.from(roots).filter((n) => n.isParent);
       };
       const jointedNodes = joinNodesGrid();
-      const processedNodes = new Set();
+      this.instanceObjs[insObjKeys.Point].resetInstance();
+      // this.instanceObjs[insObjKeys.Arrow].resetInstance();
       jointedNodes.forEach((n) => {
         this.printNodeAndChildren({
           color: "Green",
           node: n,
           vehicleId: "vehicle.id",
-          processedNodes,
+          processedNodes: new Set(),
         });
       });
+      console.log("end");
       // this.instanceObjs[targetInstanceVal].updateInstanceMeshPosition({
       //   position: { x: 1e10, y: 1e10 },
       //   index: instanceId,

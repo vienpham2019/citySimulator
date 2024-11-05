@@ -44,6 +44,17 @@ export default class InstanceMesh {
     return instanceMesh;
   }
 
+  convertPositionToString({ position }) {
+    if (position.z === null || position.z === undefined) {
+      position = {
+        x: position.x,
+        y: 0,
+        z: position.y,
+      };
+    }
+    return `${position.x},${position.y},${position.z}`;
+  }
+
   updateInstanceMeshPosition({
     position,
     index,

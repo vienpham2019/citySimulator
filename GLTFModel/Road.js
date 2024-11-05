@@ -1,4 +1,5 @@
 import { insObjKeys } from "../enum/sence.js";
+import { curveNode } from "../node/curveNode.js";
 import { straightNode } from "../node/straightNode.js";
 import GLTF from "./GLTF.js";
 import InstanceMesh from "./InstanceMesh.js";
@@ -215,7 +216,7 @@ export default class Road extends InstanceMesh {
       platformGrids[index] = insObjKeys.Road_Straight;
       nodes[`${position.x}${position.y}`] = straightNode({
         isIntersect: true,
-        isVertical: true,
+        isVertical: false,
         position,
       });
       Road.updatePlatformRoad({
