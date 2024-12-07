@@ -810,6 +810,7 @@ export default class Scene {
         return Array.from(roots).filter((n) => n.isParent);
       };
       const jointedNodes = joinNodesGrid();
+      console.log(this.nodes, jointedNodes);
       this.instanceObjs[insObjKeys.Point].resetInstance();
       // this.instanceObjs[insObjKeys.Arrow].resetInstance();
       jointedNodes.forEach((n) => {

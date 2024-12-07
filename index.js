@@ -61,28 +61,3 @@ document.body.addEventListener(
   },
   false
 );
-
-const points = [
-  { x: -2, y: -2.16 },
-  { x: -2.5, y: -2.16 },
-  { x: -2, y: -2.05 },
-  { x: -2.5, y: -2.05 },
-  { x: -2, y: -2.05 },
-  { x: -2, y: -2.16 },
-  { x: -2, y: -1.95 },
-  { x: -1.5, y: -1.95 },
-  { x: -2, y: -1.84 },
-  { x: -1.5, y: -1.84 },
-  { x: -2, y: -1.84 },
-  { x: -2, y: -1.95 },
-];
-
-for (let i = 0; i < points.length - 1; i++) {
-  const current = points[i];
-  const next = points[i + 1];
-
-  // Check if x or y values are equal and difference is less than 0.5
-  if (Math.abs(current.x + current.y - (next.x + next.y)) < 0.2) {
-    console.log(`Match found between points ${i} and ${i + 1}:`, current, next);
-  }
-}

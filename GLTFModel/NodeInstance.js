@@ -17,7 +17,7 @@ export default class NodeInstance extends InstanceMesh {
       Green: 0x00ff00,
       Red: 0xff0000,
     };
-    console.log(this.usedIndexs);
+
     for (const instanceMesh of this.instanceMesh.children) {
       instanceMesh.setColorAt(index, color.setHex(colorToHex[strColor]));
       instanceMesh.instanceColor.needsUpdate = true;
